@@ -1,6 +1,6 @@
 # Setting up home lab
 
-Documentation for setting up homelab (again..)
+Documentation for setting up home lab (again..)
 
 ## Proxmox
 
@@ -23,7 +23,8 @@ Documentation for setting up homelab (again..)
 2. Create Bitwarden entries for both
 3. Configure authorized keys
 4. Configure 201, and 202 as static IP addresses
-5. Install k3s on 201
-6. Install k3s on 202 AS slave (look at official docs)
-
+5. Install K3s on 201
+6. Install K3s on 202 AS slave (look at official docs)
+7. Copy kubeconfig to Bitwarden entry
+8. Configure GitHub ORG with new kubeconfig
 
