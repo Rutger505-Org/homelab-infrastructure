@@ -28,3 +28,15 @@ Documentation for setting up home lab (again..)
 7. Copy kubeconfig to Bitwarden entry
 8. Configure GitHub ORG with new kubeconfig
 
+## Local Image Registry
+
+1. Create a registry VM
+2. Create Bitwarden entry for the registry host
+3. Configure authorized keys
+4. Configure 192.168.178.204 as static IP
+5. Install Docker and run `registry:2` with a persistent volume for `/var/lib/registry`
+6. Protect it: basic auth via mounted `htpasswd` file, store the credentials in Bitwarden
+7. Expose over Tailscale (and/or traefik + cert-manager for TLS at `registry.<domain>`)
+8. On both K3s nodes, add the registry to `/etc/rancher/k3s/registries.yaml` (endpoint + auth) and restart K3s
+9. Test: `docker push 192.168.178.204:5000/<image>` then pull it from a Deployment
+
