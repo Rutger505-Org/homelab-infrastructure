@@ -8,6 +8,7 @@ Documentation for setting up home lab (again..)
 2. Initialize cluster
 3. Add one server as slave
 4. Setup upload Ubuntu server 26 ISO
+5. Set static ip to 200, for other installs move to 199, 198, etc.
 
 ## Tailscale
 
@@ -27,4 +28,22 @@ Documentation for setting up home lab (again..)
 6. Install K3s on 202 AS slave (look at official docs)
 7. Copy kubeconfig to Bitwarden entry
 8. Configure GitHub ORG with new kubeconfig
+
+
+## Openclaw
+
+1. Create VM
+2. Create Bitwarden entries for pass
+3. Configure authorized keys
+5. Configure 204 as static IP address
+6. Install openclaw
+
+## Mosqitto (MQTT)
+
+1. Create VM
+2. Create Bitwarden entries for pass
+3. Configure authorized keys
+4. Configure 204 as static IP address
+5. Install mosquitto
+
 
