@@ -8,31 +8,13 @@ All VMs run **Debian**.
 
 Do this for **every** VM below.
 
-In Proxmox, enable the agent in the VM config:
+In Proxmox, enable the agent in the VM config: ``qm set <vmid> --agent enabled=1``
 
-```bash
-qm set <vmid> --agent enabled=1
-```
+Then, on the VM itself: ``sudo apt update`` , ``sudo apt install -y qemu-guest-agent`` , ``sudo systemctl enable --now qemu-guest-agent``
 
-Then, on the VM itself:
+Reboot the VM once so Proxmox picks up the agent channel: ``sudo reboot``
 
-```bash
-sudo apt update
-sudo apt install -y qemu-guest-agent
-sudo systemctl enable --now qemu-guest-agent
-```
-
-Reboot the VM once so Proxmox picks up the agent channel:
-
-```bash
-sudo reboot
-```
-
-Verify from the Proxmox host:
-
-```bash
-qm agent <vmid> ping
-```
+Verify from the Proxmox host: ``qm agent <vmid> ping``
 
 ## Proxmox
 
