@@ -4,12 +4,6 @@ Documentation for setting up home lab (again..)
 
 All VMs run **Debian**, except the Openclaw VM which runs **Arch**.
 
-## QEMU guest agent (every VM)
-
-For **every** VM below, enable the QEMU guest agent in the Proxmox panel. You can do this straight away when creating the VM, otherwise go to **VM > Options > QEMU Guest Agent > Enable**.
-
-Verify from the Proxmox host: ``qm agent <vmid> ping``
-
 ## Proxmox
 
 1. Install Proxmox on both servers
