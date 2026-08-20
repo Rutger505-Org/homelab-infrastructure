@@ -6,7 +6,7 @@ All VMs run **Debian**, except the Openclaw VM which runs **Arch**.
 
 ## QEMU guest agent (every VM)
 
-For **every** VM below, tick the **QEMU Guest Agent** checkbox when creating the VM in Proxmox.
+For **every** VM below, enable the QEMU guest agent in the Proxmox panel. You can do this straight away when creating the VM, otherwise go to **VM > Options > QEMU Guest Agent > Enable**.
 
 Verify from the Proxmox host: ``qm agent <vmid> ping``
 
@@ -20,30 +20,27 @@ Verify from the Proxmox host: ``qm agent <vmid> ping``
 
 ## Tailscale
 
-1. Create Tailscale VM (Debian)
+1. Create Tailscale VM (Debian) — enable the QEMU guest agent in the Proxmox panel (at creation, or later via **VM > Options > QEMU Guest Agent > Enable**)
 2. Create Bitwarden Tailscale username, password
 3. Configure authorized keys
 4. Configure 192.168.178.203 as static IP
-5. Enable QEMU guest agent (see above)
 6. Remotely login, install and login to Tailscale
 
 ## Kubernetes
 
-1. Create 2 K3s VMs (Debian)
+1. Create 2 K3s VMs (Debian) — enable the QEMU guest agent in the Proxmox panel (at creation, or later via **VM > Options > QEMU Guest Agent > Enable**)
 2. Create Bitwarden entries for both
 3. Configure authorized keys
 4. Configure 201, and 202 as static IP addresses
-5. Enable QEMU guest agent (see above)
-6. Install K3s on 201
-7. Install K3s on 202 AS slave (look at official docs)
-8. Copy kubeconfig to Bitwarden entry
-9. Configure GitHub ORG with new kubeconfig
+5. Install K3s on 201
+6. Install K3s on 202 AS slave (look at official docs)
+7. Copy kubeconfig to Bitwarden entry
+8. Configure GitHub ORG with new kubeconfig
 
 ## Openclaw
 
-1. Create VM (Arch)
+1. Create VM (Arch) — enable the QEMU guest agent in the Proxmox panel (at creation, or later via **VM > Options > QEMU Guest Agent > Enable**)
 2. Create Bitwarden entries for pass
 3. Configure authorized keys
 4. Configure 204 as static IP address
-5. Enable QEMU guest agent (tick the checkbox on create)
-6. Install openclaw
+5. Install openclaw
