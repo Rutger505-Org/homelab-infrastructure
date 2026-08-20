@@ -8,7 +8,7 @@ All VMs run **Debian**, except the Openclaw VM which runs **Arch**.
 
 Do this for **every** VM below.
 
-In Proxmox, enable the agent in the VM config: ``qm set <vmid> --agent enabled=1``
+In Proxmox, tick the **QEMU Guest Agent** checkbox when creating the VM (see the VM creation steps below).
 
 Then, on the VM itself: ``sudo apt update`` , ``sudo apt install -y qemu-guest-agent`` , ``sudo systemctl enable --now qemu-guest-agent``
 
@@ -51,5 +51,5 @@ Verify from the Proxmox host: ``qm agent <vmid> ping``
 2. Create Bitwarden entries for pass
 3. Configure authorized keys
 4. Configure 204 as static IP address
-5. Enable QEMU guest agent (Arch: ``qm set <vmid> --agent enabled=1`` on Proxmox, ``sudo pacman -S --noconfirm qemu-guest-agent`` + ``sudo systemctl enable --now qemu-guest-agent`` on the VM)
+5. Enable QEMU guest agent (tick the checkbox on create; Arch install on the VM: ``sudo pacman -S --noconfirm qemu-guest-agent`` + ``sudo systemctl enable --now qemu-guest-agent``)
 6. Install openclaw
