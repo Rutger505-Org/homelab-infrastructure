@@ -2,7 +2,7 @@
 
 Documentation for setting up home lab (again..)
 
-All VMs run **Debian**.
+All VMs run **Debian**, except the Openclaw VM which runs **Arch**.
 
 ## QEMU guest agent (every VM)
 
@@ -47,9 +47,9 @@ Verify from the Proxmox host: ``qm agent <vmid> ping``
 
 ## Openclaw
 
-1. Create VM (Debian)
+1. Create VM (Arch)
 2. Create Bitwarden entries for pass
 3. Configure authorized keys
 4. Configure 204 as static IP address
-5. Enable QEMU guest agent (see above)
+5. Enable QEMU guest agent (Arch: ``qm set <vmid> --agent enabled=1`` on Proxmox, ``sudo pacman -S --noconfirm qemu-guest-agent`` + ``sudo systemctl enable --now qemu-guest-agent`` on the VM)
 6. Install openclaw
