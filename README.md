@@ -28,7 +28,20 @@ All VMs run Debian. The Openclaw VM is the exception and runs Arch.
 4. Configure 201 and 202 as static IP addresses
 5. Install K3s on 201
 6. Install K3s on 202 as slave (look at official docs)
-7. Disable the bundled ServiceLB (see Networking below) before deploying anything
+7. Disable the bundled ServiceLB on each node
+
+   ```bash
+   sudo tee -a /etc/rancher/k3s/config.yaml <<'EOF'
+   disable:
+     - servicelb
+   EOF
+
+   sudo systemctl restart k3s
+
+   # no svclb-* daemonsets should remain
+   kubectl get ds -n kube-system | grep svclb
+   ```
+
 8. Copy kubeconfig to the Bitwarden entry
 9. Configure the GitHub org with the new kubeconfig
 
@@ -61,19 +74,8 @@ every node**, publishing the node IPs as the external address. Alongside MetalLB
 it is redundant and actively harmful: it claims host ports cluster-wide, so only
 one service can own port 80/443/53 per node.
 
-Run this on **both** k3s servers (201 and 202):
-
-```bash
-sudo tee -a /etc/rancher/k3s/config.yaml <<'EOF'
-disable:
-  - servicelb
-EOF
-
-sudo systemctl restart k3s
-
-# no svclb-* daemonsets should remain
-kubectl get ds -n kube-system | grep svclb
-```
+The command is in step 7 of the Kubernetes install above; run it on both
+servers (201 and 202).
 
 Before restarting, make sure every LoadBalancer service has an explicit IP,
 otherwise it loses external reachability once ServiceLB is gone:
