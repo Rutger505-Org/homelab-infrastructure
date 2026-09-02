@@ -37,6 +37,7 @@ EOF
 sudo systemctl restart k3s
 # no svclb-* daemonsets should remain
 kubectl get ds -n kube-system | grep svclb
+```
 
 ## Openclaw
 
