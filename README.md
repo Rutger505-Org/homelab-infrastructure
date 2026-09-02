@@ -28,7 +28,7 @@ All VMs run Debian. The Openclaw VM is the exception and runs Arch.
 4. Configure 201 and 202 as static IP addresses
 5. Install K3s on 201
 6. Install K3s on 202 as slave (look at official docs)
-7. Disable the bundled ServiceLB on each node
+7. Disable the bundled ServiceLB on master node
 ```bash
 sudo mkdir -p /etc/rancher/k3s
 sudo tee -a /etc/rancher/k3s/config.yaml <<'EOF'
