@@ -27,9 +27,19 @@ All VMs run Debian. The Openclaw VM is the exception and runs Arch.
 3. Configure authorized keys
 4. Configure 201 and 202 as static IP addresses
 5. Install K3s on 201
-6. Install K3s on 202 as slave (look at official docs)
-7. Copy kubeconfig to the Bitwarden entry
-8. Configure the GitHub org with the new kubeconfig
+6. Disable the bundled ServiceLB on master node
+```bash
+sudo tee -a /etc/rancher/k3s/config.yaml <<'EOF'
+disable:
+  - servicelb
+EOF
+sudo systemctl restart k3s
+# no svclb-* daemonsets should remain
+kubectl get ds -n kube-system | grep svclb
+```
+7. Install K3s on 202 as slave (look at official docs)
+8. Copy kubeconfig to the Bitwarden entry
+9. Configure the GitHub org with the new kubeconfig
 
 ## Openclaw
 
