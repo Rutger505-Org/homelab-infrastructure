@@ -1,0 +1,5 @@
+tailscale_tag: tag:homelab
+tailscale_advertise_routes: []
+# OAuth client secret with the auth_keys scope, owner of tailscale_tag.
+# Only needed while a node is not logged in yet.
+tailscale_oauth_secret: "{{ lookup('ansible.builtin.env', 'TAILSCALE_HOMELAB_OAUTH_SECRET') }}"
