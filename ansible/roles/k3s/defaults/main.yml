@@ -1,0 +1,2 @@
+k3s_channel: stable
+k3s_server_host: "{{ groups['k3s_server'][0] }}"
