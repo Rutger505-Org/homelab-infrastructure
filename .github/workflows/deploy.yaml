@@ -1,0 +1,70 @@
+name: Deploy homelab
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - proxmox/**
+      - ansible/**
+      - .github/workflows/deploy.yaml
+  workflow_dispatch:
+
+concurrency:
+  group: homelab
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy VMs and services
+    runs-on: ubuntu-latest
+
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      AWS_ENDPOINT_URL_S3: ${{ vars.R2_ENDPOINT }}
+      TF_VAR_state_passphrase: ${{ secrets.TOFU_STATE_PASSPHRASE }}
+      TF_VAR_ssh_public_keys: ${{ vars.HOMELAB_SSH_PUBLIC_KEYS }}
+      PROXMOX_VE_ENDPOINT: ${{ vars.PROXMOX_VE_ENDPOINT }}
+      PROXMOX_VE_API_TOKEN: ${{ secrets.PROXMOX_VE_API_TOKEN }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v4
+        with:
+          oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
+          tags: tag:ci
+          version: latest
+
+      - name: Load SSH key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.HOMELAB_SSH_PRIVATE_KEY }}
+        run: |
+          eval "$(ssh-agent -s)"
+          ssh-add - <<< "$SSH_PRIVATE_KEY"
+          echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> "$GITHUB_ENV"
+
+      - name: Setup OpenTofu
+        uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: 1.13.0
+          tofu_wrapper: false
+
+      - name: OpenTofu Apply VMs
+        working-directory: ./proxmox
+        run: |
+          tofu init
+          tofu apply -input=false -auto-approve
+
+      - name: Install Ansible
+        run: pipx install ansible-core
+
+      - name: Ansible configure VMs
+        working-directory: ./ansible
+        env:
+          TAILSCALE_HOMELAB_OAUTH_SECRET: ${{ secrets.TAILSCALE_HOMELAB_OAUTH_SECRET }}
+        run: ansible-playbook playbook.yml

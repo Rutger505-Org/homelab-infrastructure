@@ -1,0 +1,2 @@
+tailscale_advertise_routes:
+  - 192.168.178.0/24

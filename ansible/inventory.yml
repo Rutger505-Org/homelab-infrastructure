@@ -1,0 +1,32 @@
+# Single source of truth for the managed VMs: OpenTofu creates a VM for every
+# host below, Ansible configures it. vm_id, proxmox_node, cores, memory and
+# disk_size are read by OpenTofu only.
+#
+# Uses a throwaway range next to the hand-built .201-.203 VMs until this has
+# proven itself; switching over is changing the ids and addresses here.
+all:
+  vars:
+    ansible_user: debian
+  children:
+    tailscale:
+      hosts:
+        tailscale-router:
+          ansible_host: 192.168.178.213
+          vm_id: 903
+          cores: 1
+          memory: 1024
+          disk_size: 10
+    k3s_server:
+      hosts:
+        k3s-server:
+          ansible_host: 192.168.178.211
+          vm_id: 901
+          memory: 4096
+          disk_size: 40
+    k3s_agent:
+      hosts:
+        k3s-agent:
+          ansible_host: 192.168.178.212
+          vm_id: 902
+          memory: 4096
+          disk_size: 40
