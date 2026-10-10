@@ -18,7 +18,7 @@ variable "proxmox_ssh_username" {
 variable "default_proxmox_node" {
   description = "Proxmox node for VMs that do not set proxmox_node in the inventory"
   type        = string
-  default     = "pve"
+  default     = "proxmox-lade"
 }
 
 variable "datastore_id" {

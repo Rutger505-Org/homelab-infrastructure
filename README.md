@@ -41,8 +41,8 @@ describes the VMs k3s runs on, so it has to survive the cluster.
    - allow `tag:ci` to reach `192.168.178.0/24` on ports 22 and 8006
 6. Generate a state passphrase of at least 16 characters and store it in Bitwarden.
    Without it the state cannot be read.
-7. Check the Proxmox node name. VMs default to `pve`; set `proxmox_node` per host in
-   the inventory otherwise.
+7. VMs land on node `proxmox-lade` by default; set `proxmox_node` per host in the
+   inventory to place one on the other node.
 
 ### GitHub configuration
 
