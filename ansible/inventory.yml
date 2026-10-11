@@ -30,3 +30,14 @@ all:
           vm_id: 902
           memory: 4096
           disk_size: 40
+    seaweedfs:
+      hosts:
+        # S3 object storage behind cdn.rutgerpronk.com. Traefik in k3s still
+        # terminates TLS and forwards to port 8333 here. Its own VM because
+        # the k3s nodes do not have the disk for it.
+        seaweedfs-server:
+          ansible_host: 192.168.178.214
+          vm_id: 904
+          cores: 1
+          memory: 1024
+          disk_size: 60

@@ -27,3 +27,9 @@
   become: true
   roles:
     - k3s
+
+- name: Install SeaweedFS
+  hosts: seaweedfs
+  become: true
+  roles:
+    - seaweedfs

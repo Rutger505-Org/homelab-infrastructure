@@ -67,4 +67,6 @@ jobs:
         working-directory: ./ansible
         env:
           TAILSCALE_HOMELAB_OAUTH_SECRET: ${{ secrets.TAILSCALE_HOMELAB_OAUTH_SECRET }}
+          SEAWEEDFS_ADMIN_ACCESS_KEY: ${{ secrets.SEAWEEDFS_ADMIN_ACCESS_KEY }}
+          SEAWEEDFS_ADMIN_SECRET_KEY: ${{ secrets.SEAWEEDFS_ADMIN_SECRET_KEY }}
         run: ansible-playbook playbook.yml

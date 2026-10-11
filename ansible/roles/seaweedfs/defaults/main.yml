@@ -1,0 +1,13 @@
+seaweedfs_version: "4.48"
+seaweedfs_data_dir: /var/lib/seaweedfs
+seaweedfs_s3_port: 8333
+# Every bucket is its own collection and needs its own volume, and the volume
+# server sizes its slot count as free disk / this limit. Small volumes keep
+# enough slots free for every bucket.
+seaweedfs_volume_size_limit_mb: 256
+# Objects are anonymously readable per file; listing and writes need the admin key.
+seaweedfs_buckets:
+  - clips
+  - artifacts
+seaweedfs_admin_access_key: "{{ lookup('ansible.builtin.env', 'SEAWEEDFS_ADMIN_ACCESS_KEY') }}"
+seaweedfs_admin_secret_key: "{{ lookup('ansible.builtin.env', 'SEAWEEDFS_ADMIN_SECRET_KEY') }}"

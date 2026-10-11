@@ -15,7 +15,7 @@ All VMs run Debian. The Openclaw VM is the exception and runs Arch.
 ## VMs as code (work in progress)
 
 `proxmox/` (OpenTofu) creates every VM listed in `ansible/inventory.yml`, and
-`ansible/` installs Tailscale and k3s on them. CI runs both on every push to
+`ansible/` installs Tailscale, k3s and SeaweedFS on them. CI runs both on every push to
 main that touches them. It currently builds a parallel test cluster on
 `.211`–`.213` (ids 901–903); the manual sections below still describe the live VMs.
 
@@ -53,6 +53,7 @@ Secrets:
 - `HOMELAB_SSH_PRIVATE_KEY`: the CI private key
 - `TAILSCALE_HOMELAB_OAUTH_SECRET`: the `tag:homelab` OAuth client secret
 - `TAILSCALE_OAUTH_CLIENT_ID`, `TAILSCALE_OAUTH_SECRET`: the `tag:ci` client, same as kubernetes-infrastructure
+- `SEAWEEDFS_ADMIN_ACCESS_KEY`, `SEAWEEDFS_ADMIN_SECRET_KEY`: S3 admin credentials for the CDN
 
 Variables:
 - `R2_ENDPOINT`: `https://<account-id>.r2.cloudflarestorage.com`
@@ -74,6 +75,8 @@ export TF_VAR_ssh_public_keys='["ssh-ed25519 AAAA..."]'
 export PROXMOX_VE_ENDPOINT=https://192.168.178.200:8006/
 export PROXMOX_VE_API_TOKEN='terraform@pve!opentofu=<secret>'
 export TAILSCALE_HOMELAB_OAUTH_SECRET=<tskey-client-...>
+export SEAWEEDFS_ADMIN_ACCESS_KEY=<access key>
+export SEAWEEDFS_ADMIN_SECRET_KEY=<secret key>
 
 tofu -chdir=proxmox init
 tofu -chdir=proxmox apply
@@ -92,12 +95,25 @@ ssh debian@192.168.178.211 sudo cat /etc/rancher/k3s/k3s.yaml
 Add a host to a group in `ansible/inventory.yml` with `ansible_host` and `vm_id`
 (`cores`, `memory`, `disk_size` and `proxmox_node` are optional) and push.
 
+### SeaweedFS
+
+The `seaweedfs` VM runs SeaweedFS (master, volume, filer and S3 gateway in one
+`weed server` process) as the storage behind `cdn.rutgerpronk.com`. Traefik in
+k3s terminates TLS and forwards to S3 on port 8333 (see `5-seaweedfs` in
+kubernetes-infrastructure); everything else listens on localhost only, and
+nftables only lets in SSH and S3.
+
+- Data: `/var/lib/seaweedfs` on the root disk
+- Buckets: `seaweedfs_buckets` in the role defaults, objects anonymously readable per file
+- Upgrade: bump `seaweedfs_version`
+
 ### Known limits
 
 - Rebuilding the Tailscale router from CI cuts CI's own route to the LAN mid-run
 - k3s is only installed, not upgraded: the installer is skipped once k3s exists
 - A destroyed VM stays in the tailnet until removed in the admin console
 - No backups yet; set up vzdump or PBS before trusting automated rebuilds
+- Rebuilding the `seaweedfs` VM deletes every CDN object, they live on its root disk
 
 ## Tailscale
 
