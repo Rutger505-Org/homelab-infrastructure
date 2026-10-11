@@ -2,10 +2,11 @@ locals {
   inventory = yamldecode(file("${path.module}/../ansible/inventory.yml"))
 
   vm_defaults = {
-    proxmox_node = var.default_proxmox_node
-    cores        = 2
-    memory       = 2048
-    disk_size    = 20
+    proxmox_node   = var.default_proxmox_node
+    cores          = 2
+    memory         = 2048
+    disk_size      = 20
+    data_disk_size = 0
   }
 
   vms = {
@@ -32,12 +33,13 @@ module "vm" {
   source   = "./modules/debian-vm"
   for_each = local.vms
 
-  name      = each.key
-  vm_id     = each.value.vm_id
-  node_name = each.value.proxmox_node
-  cores     = each.value.cores
-  memory    = each.value.memory
-  disk_size = each.value.disk_size
+  name           = each.key
+  vm_id          = each.value.vm_id
+  node_name      = each.value.proxmox_node
+  cores          = each.value.cores
+  memory         = each.value.memory
+  disk_size      = each.value.disk_size
+  data_disk_size = each.value.data_disk_size
 
   datastore_id         = var.datastore_id
   snippet_datastore_id = var.file_datastore_id

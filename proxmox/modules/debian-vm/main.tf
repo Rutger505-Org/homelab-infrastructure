@@ -69,6 +69,18 @@ resource "proxmox_virtual_environment_vm" "this" {
     ssd          = true
   }
 
+  dynamic "disk" {
+    for_each = var.data_disk_size > 0 ? [var.data_disk_size] : []
+
+    content {
+      datastore_id = var.datastore_id
+      interface    = "scsi1"
+      size         = disk.value
+      discard      = "on"
+      ssd          = true
+    }
+  }
+
   initialization {
     datastore_id      = var.datastore_id
     user_data_file_id = proxmox_virtual_environment_file.cloud_config.id
@@ -94,6 +106,10 @@ resource "proxmox_virtual_environment_vm" "this" {
   }
 
   lifecycle {
+    # These VMs hold data without backups yet: a destroy or forced replacement
+    # fails the plan instead. Remove this line on purpose to rebuild one.
+    prevent_destroy = true
+
     # Re-downloading the base image must not rebuild every existing VM.
     ignore_changes = [disk[0].import_from]
   }

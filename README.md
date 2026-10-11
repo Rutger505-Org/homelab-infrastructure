@@ -12,15 +12,18 @@ All VMs run Debian. The Openclaw VM is the exception and runs Arch.
 4. Upload the Debian server ISO
 5. Set static ip to 200. For other installs move to 199, 198, etc.
 
-## VMs as code (work in progress)
+## VMs as code
 
-`proxmox/` (OpenTofu) creates every VM listed in `ansible/inventory.yml`, and
-`ansible/` installs Tailscale and k3s on them. CI runs both on every push to
-main that touches them. It currently builds a parallel test cluster on
-`.211`–`.213` (ids 901–903); the manual sections below still describe the live VMs.
+`proxmox/` (OpenTofu) creates every VM listed in `ansible/inventory.yml` from the
+Debian 13 cloud image, with cloud-init only setting up the `debian` user, SSH keys
+and the QEMU guest agent. `ansible/` then configures what runs on it. CI runs both
+on every push to main that touches them.
 
-State lives in Cloudflare R2, encrypted with a passphrase, not in k3s: it
-describes the VMs k3s runs on, so it has to survive the cluster.
+Only the SeaweedFS VM is managed this way. The Tailscale and k3s VMs are still
+built by hand, see the sections below.
+
+State lives in Cloudflare R2, encrypted with a passphrase, not in k3s, so it stays
+readable when the cluster is gone.
 
 ### One-time setup
 
@@ -35,10 +38,10 @@ describes the VMs k3s runs on, so it has to survive the cluster.
    public key to `/root/.ssh/authorized_keys` on both Proxmox nodes. The API cannot upload
    snippets, so OpenTofu needs SSH for that.
 4. Create the R2 bucket `homelab-tofu-state` and an R2 API token with Object Read & Write on it
-5. Tailscale:
-   - add `tag:homelab` and `tag:ci-homelab` to `tagOwners` in the tailnet policy
-   - create an OAuth client with the `auth_keys` write scope and `tag:homelab`
-   - create an OAuth client with the `auth_keys` write scope and `tag:ci-homelab` for CI
+5. Tailscale: CI joins as `tag:ci-homelab` and reaches the LAN through the existing subnet
+   router. The VMs themselves are not in the tailnet.
+   - add `tag:ci-homelab` to `tagOwners` in the tailnet policy
+   - create an OAuth client with the `auth_keys` write scope and `tag:ci-homelab`
    - allow `tag:ci-homelab` to reach `192.168.178.0/24` on ports 22 and 8006.
      `tag:ci` stays limited to the Kubernetes API.
 6. Generate a state passphrase of at least 16 characters and store it in Bitwarden.
@@ -53,19 +56,18 @@ Secrets:
 - `TOFU_STATE_PASSPHRASE`
 - `PROXMOX_VE_API_TOKEN`: `terraform@pve!opentofu=<secret>`
 - `HOMELAB_SSH_PRIVATE_KEY`: the CI private key
-- `TAILSCALE_HOMELAB_OAUTH_SECRET`: the `tag:homelab` OAuth client secret
 - `TAILSCALE_CI_HOMELAB_OAUTH_CLIENT_ID`, `TAILSCALE_CI_HOMELAB_OAUTH_SECRET`: the `tag:ci-homelab` client
+- `SEAWEEDFS_ADMIN_ACCESS_KEY`, `SEAWEEDFS_ADMIN_SECRET_KEY`: S3 admin credentials
 
 Variables:
 - `R2_ENDPOINT`: `https://<account-id>.r2.cloudflarestorage.com`
 - `PROXMOX_VE_ENDPOINT`: `https://192.168.178.200:8006/`
 - `HOMELAB_SSH_PUBLIC_KEYS`: JSON list with the CI public key and your own, e.g. `["ssh-ed25519 AAAA... homelab-ci"]`
 
-### Bootstrap from a laptop
+### Running locally
 
-CI reaches the homelab through Tailscale, and the Tailscale router is one of these
-VMs, so after a rebuild the first run is always local, from the LAN. Your SSH key
-must be in the agent and authorized on the Proxmox nodes.
+Needed when the Tailscale router is down, since CI reaches the homelab through it.
+Run from the LAN, with your SSH key in the agent and authorized on the Proxmox nodes.
 
 ```bash
 export AWS_ACCESS_KEY_ID=<r2 access key id>
@@ -75,7 +77,8 @@ export TF_VAR_state_passphrase=<passphrase>
 export TF_VAR_ssh_public_keys='["ssh-ed25519 AAAA..."]'
 export PROXMOX_VE_ENDPOINT=https://192.168.178.200:8006/
 export PROXMOX_VE_API_TOKEN='terraform@pve!opentofu=<secret>'
-export TAILSCALE_HOMELAB_OAUTH_SECRET=<tskey-client-...>
+export SEAWEEDFS_ADMIN_ACCESS_KEY=<access key>
+export SEAWEEDFS_ADMIN_SECRET_KEY=<secret key>
 
 tofu -chdir=proxmox init
 tofu -chdir=proxmox apply
@@ -83,23 +86,31 @@ cd ansible
 ansible-playbook playbook.yml
 ```
 
-Then fetch the kubeconfig and replace `127.0.0.1` with the server address:
-
-```bash
-ssh debian@192.168.178.211 sudo cat /etc/rancher/k3s/k3s.yaml
-```
-
 ### Adding a VM
 
-Add a host to a group in `ansible/inventory.yml` with `ansible_host` and `vm_id`
-(`cores`, `memory`, `disk_size` and `proxmox_node` are optional) and push.
+Add a group and host to `ansible/inventory.yml` with `ansible_host` and `vm_id`
+(`cores`, `memory`, `disk_size`, `data_disk_size` and `proxmox_node` are optional),
+add a play for the group to `ansible/playbook.yml` and push.
+
+Every VM has `prevent_destroy`: removing it from the inventory, `tofu destroy` or a
+change that forces a rebuild fails the run. Remove that line in
+`proxmox/modules/debian-vm/main.tf` on purpose to rebuild one.
+
+### SeaweedFS
+
+`seaweedfs-server` (`.214`, id 904) runs SeaweedFS (master, volume, filer and S3
+gateway in one `weed server` process). Only S3 on port 8333 and SSH are reachable;
+the rest listens on localhost and nftables drops everything else.
+
+- Data: `/var/lib/seaweedfs` on its own 60 GB disk (scsi1), separate from the root disk
+- Buckets: `seaweedfs_buckets` in the role defaults, objects anonymously readable per file
+- Upgrade: bump `seaweedfs_version`
+- Not in use yet: the CDN still points at SeaweedFS in k3s until it is moved over
 
 ### Known limits
 
-- Rebuilding the Tailscale router from CI cuts CI's own route to the LAN mid-run
-- k3s is only installed, not upgraded: the installer is skipped once k3s exists
-- A destroyed VM stays in the tailnet until removed in the admin console
-- No backups yet; set up vzdump or PBS before trusting automated rebuilds
+- cloud-init only runs on first boot; changes to it only reach new VMs
+- No backups yet; set up vzdump or PBS before relying on the data disk alone
 
 ## Tailscale
 

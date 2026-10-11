@@ -10,20 +10,8 @@
       ansible.builtin.command: cloud-init status --wait
       changed_when: false
 
-- name: Join the tailnet
-  hosts: all
+- name: Install SeaweedFS
+  hosts: seaweedfs
   become: true
   roles:
-    - tailscale
-
-- name: Install k3s server
-  hosts: k3s_server
-  become: true
-  roles:
-    - k3s
-
-- name: Install k3s agents
-  hosts: k3s_agent
-  become: true
-  roles:
-    - k3s
+    - seaweedfs
