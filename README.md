@@ -36,9 +36,11 @@ describes the VMs k3s runs on, so it has to survive the cluster.
    snippets, so OpenTofu needs SSH for that.
 4. Create the R2 bucket `homelab-tofu-state` and an R2 API token with Object Read & Write on it
 5. Tailscale:
-   - add `tag:homelab` to `tagOwners` in the tailnet policy
+   - add `tag:homelab` and `tag:ci-homelab` to `tagOwners` in the tailnet policy
    - create an OAuth client with the `auth_keys` write scope and `tag:homelab`
-   - allow `tag:ci` to reach `192.168.178.0/24` on ports 22 and 8006
+   - create an OAuth client with the `auth_keys` write scope and `tag:ci-homelab` for CI
+   - allow `tag:ci-homelab` to reach `192.168.178.0/24` on ports 22 and 8006.
+     `tag:ci` stays limited to the Kubernetes API.
 6. Generate a state passphrase of at least 16 characters and store it in Bitwarden.
    Without it the state cannot be read.
 7. VMs land on node `proxmox-lade` by default; set `proxmox_node` per host in the
@@ -52,7 +54,7 @@ Secrets:
 - `PROXMOX_VE_API_TOKEN`: `terraform@pve!opentofu=<secret>`
 - `HOMELAB_SSH_PRIVATE_KEY`: the CI private key
 - `TAILSCALE_HOMELAB_OAUTH_SECRET`: the `tag:homelab` OAuth client secret
-- `TAILSCALE_OAUTH_CLIENT_ID`, `TAILSCALE_OAUTH_SECRET`: the `tag:ci` client, same as kubernetes-infrastructure
+- `TAILSCALE_CI_HOMELAB_OAUTH_CLIENT_ID`, `TAILSCALE_CI_HOMELAB_OAUTH_SECRET`: the `tag:ci-homelab` client
 
 Variables:
 - `R2_ENDPOINT`: `https://<account-id>.r2.cloudflarestorage.com`
