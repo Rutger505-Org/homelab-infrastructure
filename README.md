@@ -87,9 +87,9 @@ ansible-playbook playbook.yml
 
 ### Adding a VM
 
-Add a group and host to `ansible/inventory.yml` with `ansible_host`, `vm_id` and
-`proxmox_node` (the Proxmox node name, e.g. `proxmox-lade`; there is no default).
-`cores`, `memory`, `disk_size` and `data_disk_size` are optional,
+Add a group and host to `ansible/inventory.yml` with `ansible_host`, `vm_id`,
+`proxmox_node` (e.g. `proxmox-lade`), `cores`, `memory` (MiB), `disk_size` and
+`data_disk_size` (GiB, `0` for none). All are required, there are no defaults;
 add a play for the group to `ansible/playbook.yml` and push.
 
 Every VM has `prevent_destroy`: removing it from the inventory, `tofu destroy` or a
