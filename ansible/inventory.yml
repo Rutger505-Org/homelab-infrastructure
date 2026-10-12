@@ -1,10 +1,22 @@
-# Single source of truth for the managed VMs: OpenTofu creates a VM for every
+# Single source of truth for the VMs: OpenTofu creates a VM for every
 # host below, Ansible configures it. vm_id, proxmox_node, cores, memory,
 # disk_size and data_disk_size are read by OpenTofu only and all required,
 # there are no defaults (data_disk_size: 0 for no data disk).
 all:
   vars:
     ansible_user: debian
+    # Exact contents of ~/.ssh/authorized_keys for ansible_user on every host
+    # below; keys not listed here are removed on deploy. Also used by
+    # cloud-init for new VMs. Must keep the homelab-ci key, CI logs in with it.
+    ssh_authorized_keys:
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIN6UkH6YxTSa4wR6df7ISkaz0UHmmEswG2M3/8AV5ebL
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICaVEo3BA5BZHtu5shSj/aLYBFT5pxkBMOk69lw/ewWK
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJWqMziuQxU76b0XIGdBuk48tjN71/D4FGZst0W3Mkya
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINxENCrXlBIHDdD8zhZ7slcrrzc6n27LI7Toj8pByzaI
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEjR7TTxx7+uSqN/sDVGnRl3Ie2iyDcwmgnptJQ2KxT/
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK5DCkjLrATKWR+HrrelHjHsNXw9y8i4wdnoNsmHqlNn
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIVzHJcd5YeyJte42gwXJ3LkypK3zkXaOE5ZVz/2fUSW
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAzdG1/zOJzA5TzmRdGS6O/iCEAirVxAFLAbbYyuJeaN homelab-ci
   children:
     seaweedfs:
       hosts:

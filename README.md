@@ -61,7 +61,6 @@ Secrets:
 Variables:
 - `R2_ENDPOINT`: `https://<account-id>.r2.cloudflarestorage.com`
 - `PROXMOX_VE_ENDPOINT`: `https://192.168.178.200:8006/`
-- `HOMELAB_SSH_PUBLIC_KEYS`: JSON list with the CI public key and your own, e.g. `["ssh-ed25519 AAAA... homelab-ci"]`
 
 ### Running locally
 
@@ -73,7 +72,6 @@ export AWS_ACCESS_KEY_ID=<r2 access key id>
 export AWS_SECRET_ACCESS_KEY=<r2 secret>
 export AWS_ENDPOINT_URL_S3=https://<account-id>.r2.cloudflarestorage.com
 export TF_VAR_state_passphrase=<passphrase>
-export TF_VAR_ssh_public_keys='["ssh-ed25519 AAAA..."]'
 export PROXMOX_VE_ENDPOINT=https://192.168.178.200:8006/
 export PROXMOX_VE_API_TOKEN='terraform@pve!opentofu=<secret>'
 export SEAWEEDFS_ADMIN_ACCESS_KEY=<access key>
@@ -84,6 +82,14 @@ tofu -chdir=proxmox apply
 cd ansible
 ansible-playbook playbook.yml
 ```
+
+### SSH keys
+
+`ssh_authorized_keys` in `ansible/inventory.yml` is the exact `authorized_keys` of
+the login user on every VM in the inventory. Add or remove a
+key there and merge; the deploy rewrites the file on every VM and removes keys that
+are not listed. Keep the `homelab-ci` key, the run refuses a list without it.
+New VMs get the same list through cloud-init.
 
 ### Adding a VM
 
@@ -109,7 +115,8 @@ the rest listens on localhost and nftables drops everything else.
 
 ### Known limits
 
-- cloud-init only runs on first boot; changes to it only reach new VMs
+- cloud-init only runs on first boot; changes to it only reach new VMs (SSH keys are
+  the exception, Ansible keeps those in sync)
 - No backups yet; set up vzdump or PBS before relying on the data disk alone
 
 ## Tailscale

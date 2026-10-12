@@ -10,6 +10,12 @@
       ansible.builtin.command: cloud-init status --wait
       changed_when: false
 
+- name: Manage SSH keys
+  hosts: all
+  gather_facts: false
+  roles:
+    - ssh_keys
+
 - name: Install SeaweedFS
   hosts: seaweedfs
   become: true

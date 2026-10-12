@@ -38,5 +38,5 @@ module "vm" {
   ipv4_gateway = var.lan_gateway
   nameservers  = [var.lan_gateway]
 
-  ssh_public_keys = var.ssh_public_keys
+  ssh_public_keys = local.inventory.all.vars.ssh_authorized_keys
 }
