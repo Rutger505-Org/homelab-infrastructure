@@ -131,7 +131,7 @@ as drift and is reverted on the next apply.
 
 ### One-time setup
 
-1. Create a Cloudflare API token with `Zone : DNS : Edit` and `Zone : Zone : Read` on both zones
+1. Create a Cloudflare API token with `Zone : DNS : Edit`, `Zone : Single Redirect : Edit` and `Zone : Zone : Read` on both zones
 2. Store it as the GitHub secret `CLOUDFLARE_DNS_API_TOKEN`
 
 ### Running locally
