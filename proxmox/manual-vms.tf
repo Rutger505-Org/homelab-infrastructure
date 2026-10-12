@@ -72,8 +72,14 @@ resource "proxmox_virtual_environment_vm" "manual" {
     type    = "x86-64-v2-AES"
   }
 
-  memory {
-    dedicated = each.value.memory
+  # The provider leaves the block out of state when memory is its 512 MiB
+  # default, so declaring it there would show a change.
+  dynamic "memory" {
+    for_each = each.value.memory == 512 ? [] : [each.value.memory]
+
+    content {
+      dedicated = memory.value
+    }
   }
 
   disk {
@@ -83,10 +89,8 @@ resource "proxmox_virtual_environment_vm" "manual" {
     iothread     = true
   }
 
-  cdrom {
-    interface = "ide2"
-    file_id   = each.value.cdrom
-  }
+  # ide2 (CD drive, `cdrom` in the locals) is left out: the provider does not
+  # import it, and declaring it would rewrite the drive on apply.
 
   network_device {
     bridge      = "vmbr0"
