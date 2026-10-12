@@ -1,8 +1,12 @@
 locals {
   inventory = yamldecode(file("${path.module}/../ansible/inventory.yml"))
 
-  # No defaults: every host sets its node and specs explicitly.
-  vms = merge([for group in values(local.inventory.all.children) : group.hosts]...)
+  # No defaults: every host sets its node and specs explicitly. Hosts without
+  # a vm_id are built by hand and only configured by Ansible.
+  vms = {
+    for name, host in merge([for group in values(local.inventory.all.children) : group.hosts]...) :
+    name => host if can(host.vm_id)
+  }
 
   proxmox_nodes = toset([for vm in values(local.vms) : vm.proxmox_node])
 }
@@ -38,5 +42,5 @@ module "vm" {
   ipv4_gateway = var.lan_gateway
   nameservers  = [var.lan_gateway]
 
-  ssh_public_keys = var.ssh_public_keys
+  ssh_public_keys = local.inventory.all.vars.ssh_authorized_keys
 }

@@ -4,11 +4,6 @@ variable "state_passphrase" {
   sensitive   = true
 }
 
-variable "ssh_public_keys" {
-  description = "Public keys allowed to log in as the VM user, including the CI key Ansible uses"
-  type        = list(string)
-}
-
 variable "proxmox_ssh_username" {
   description = "SSH user on the Proxmox nodes, used to upload cloud-init snippets"
   type        = string

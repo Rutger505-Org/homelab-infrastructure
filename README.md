@@ -14,13 +14,14 @@ All VMs run Debian. The Openclaw VM is the exception and runs Arch.
 
 ## VMs as code
 
-`proxmox/` (OpenTofu) creates every VM listed in `ansible/inventory.yml` from the
+`proxmox/` (OpenTofu) creates every VM with a `vm_id` in `ansible/inventory.yml` from the
 Debian 13 cloud image, with cloud-init only setting up the `debian` user, SSH keys
 and the QEMU guest agent. `ansible/` then configures what runs on it. CI runs both
 on every push to main that touches them.
 
-Only the SeaweedFS VM is managed this way. The Tailscale and k3s VMs are still
-built by hand, see the sections below.
+Only the SeaweedFS VM is managed this way. The Tailscale, k3s and Openclaw VMs are
+still built by hand, see the sections below. They are in the inventory's `manual`
+group so Ansible manages their SSH keys too.
 
 State lives in Cloudflare R2, encrypted with a passphrase, not in k3s, so it stays
 readable when the cluster is gone.
@@ -61,7 +62,6 @@ Secrets:
 Variables:
 - `R2_ENDPOINT`: `https://<account-id>.r2.cloudflarestorage.com`
 - `PROXMOX_VE_ENDPOINT`: `https://192.168.178.200:8006/`
-- `HOMELAB_SSH_PUBLIC_KEYS`: JSON list with the CI public key and your own, e.g. `["ssh-ed25519 AAAA... homelab-ci"]`
 
 ### Running locally
 
@@ -73,7 +73,6 @@ export AWS_ACCESS_KEY_ID=<r2 access key id>
 export AWS_SECRET_ACCESS_KEY=<r2 secret>
 export AWS_ENDPOINT_URL_S3=https://<account-id>.r2.cloudflarestorage.com
 export TF_VAR_state_passphrase=<passphrase>
-export TF_VAR_ssh_public_keys='["ssh-ed25519 AAAA..."]'
 export PROXMOX_VE_ENDPOINT=https://192.168.178.200:8006/
 export PROXMOX_VE_API_TOKEN='terraform@pve!opentofu=<secret>'
 export SEAWEEDFS_ADMIN_ACCESS_KEY=<access key>
@@ -84,6 +83,17 @@ tofu -chdir=proxmox apply
 cd ansible
 ansible-playbook playbook.yml
 ```
+
+### SSH keys
+
+`ssh_authorized_keys` in `ansible/inventory.yml` is the exact `authorized_keys` of
+the login user on every host, managed VMs and `manual` ones alike. Add or remove a
+key there and merge; the deploy rewrites the file on every VM and removes keys that
+are not listed. Keep the `homelab-ci` key, the run refuses a list without it.
+New VMs get the same list through cloud-init.
+
+A `manual` host must have the `homelab-ci` public key authorized once by hand,
+otherwise the deploy cannot log in and fails.
 
 ### Adding a VM
 
@@ -109,7 +119,8 @@ the rest listens on localhost and nftables drops everything else.
 
 ### Known limits
 
-- cloud-init only runs on first boot; changes to it only reach new VMs
+- cloud-init only runs on first boot; changes to it only reach new VMs (SSH keys are
+  the exception, Ansible keeps those in sync)
 - No backups yet; set up vzdump or PBS before relying on the data disk alone
 
 ## Tailscale

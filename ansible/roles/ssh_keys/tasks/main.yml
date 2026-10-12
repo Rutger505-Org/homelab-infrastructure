@@ -1,0 +1,19 @@
+- name: Refuse a key list that locks CI out
+  ansible.builtin.assert:
+    that:
+      - ssh_authorized_keys | length > 0
+      - ssh_authorized_keys | select('search', ' homelab-ci$') | list | length > 0
+    fail_msg: ssh_authorized_keys must contain the homelab-ci key
+    quiet: true
+
+- name: Create ~/.ssh
+  ansible.builtin.file:
+    path: ~/.ssh
+    state: directory
+    mode: "0700"
+
+- name: Write authorized_keys
+  ansible.builtin.copy:
+    dest: ~/.ssh/authorized_keys
+    content: "{{ ssh_authorized_keys | join('\n') }}\n"
+    mode: "0600"
