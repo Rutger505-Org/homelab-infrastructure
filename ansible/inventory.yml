@@ -34,3 +34,13 @@ all:
           memory: 2048
           disk_size: 16
           data_disk_size: 10
+    adguard_home:
+      hosts:
+        adguard-home:
+          ansible_host: 192.168.178.205
+          vm_id: 906
+          proxmox_node: proxmox-prodesk
+          cores: 1
+          memory: 512
+          disk_size: 8
+          data_disk_size: 0

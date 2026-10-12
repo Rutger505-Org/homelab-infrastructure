@@ -1,0 +1,14 @@
+adguard_home_version: "v0.107.79"
+adguard_home_dir: /var/lib/adguardhome
+adguard_home_web_port: 80
+# Only used to seed the first config. AdGuard Home rewrites its config itself,
+# so after the first run settings are changed in the web UI, not here.
+adguard_home_upstream_dns:
+  - https://dns.quad9.net/dns-query
+  - https://cloudflare-dns.com/dns-query
+adguard_home_bootstrap_dns:
+  - 9.9.9.9
+  - 1.1.1.1
+adguard_home_admin_user: admin
+# bcrypt hash of the web UI password, e.g. from `htpasswd -nbBC 10 "" <password>`.
+adguard_home_admin_password_hash: "{{ lookup('ansible.builtin.env', 'ADGUARD_ADMIN_PASSWORD_HASH') }}"

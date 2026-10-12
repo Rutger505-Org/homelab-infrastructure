@@ -1,0 +1,122 @@
+- name: Check admin password hash
+  ansible.builtin.assert:
+    that:
+      - adguard_home_admin_password_hash is match('^[$]2[aby][$]')
+    fail_msg: Set ADGUARD_ADMIN_PASSWORD_HASH to a bcrypt hash.
+    quiet: true
+  no_log: true
+
+- name: Install nftables
+  ansible.builtin.apt:
+    name: nftables
+
+- name: Write firewall rules
+  ansible.builtin.template:
+    src: nftables.conf.j2
+    dest: /etc/nftables.conf
+    mode: "0644"
+  notify: Reload nftables
+
+- name: Load firewall rules on boot
+  ansible.builtin.systemd_service:
+    name: nftables
+    enabled: true
+
+- name: Read services
+  ansible.builtin.service_facts:
+
+# The resolved stub listener holds 127.0.0.53:53, which blocks AdGuard Home
+# from binding port 53 on all addresses.
+- name: Create resolved drop-in directory
+  ansible.builtin.file:
+    path: /etc/systemd/resolved.conf.d
+    state: directory
+    mode: "0755"
+  when: "'systemd-resolved.service' in ansible_facts.services"
+
+- name: Disable resolved stub listener
+  ansible.builtin.copy:
+    dest: /etc/systemd/resolved.conf.d/adguard-home.conf
+    content: |
+      [Resolve]
+      DNSStubListener=no
+    mode: "0644"
+  when: "'systemd-resolved.service' in ansible_facts.services"
+  notify: Restart systemd-resolved
+
+- name: Apply resolved change before AdGuard Home binds port 53
+  ansible.builtin.meta: flush_handlers
+
+- name: Create adguardhome user
+  ansible.builtin.user:
+    name: adguardhome
+    system: true
+    shell: /usr/sbin/nologin
+    home: "{{ adguard_home_dir }}"
+    create_home: false
+
+- name: Create directories
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner }}"
+    group: "{{ item.owner }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - { path: "/opt/adguard-home/{{ adguard_home_version }}", owner: root, mode: "0755" }
+    - { path: "{{ adguard_home_dir }}", owner: adguardhome, mode: "0750" }
+
+# One directory per version, so bumping adguard_home_version installs and
+# switches to the new binary and the old one stays around for a rollback.
+- name: Download AdGuard Home
+  ansible.builtin.unarchive:
+    src: https://github.com/AdguardTeam/AdGuardHome/releases/download/{{ adguard_home_version }}/AdGuardHome_linux_amd64.tar.gz
+    dest: /opt/adguard-home/{{ adguard_home_version }}
+    remote_src: true
+    extra_opts: [--strip-components=1]
+    creates: /opt/adguard-home/{{ adguard_home_version }}/AdGuardHome
+
+- name: Link AdGuardHome binary
+  ansible.builtin.file:
+    src: /opt/adguard-home/{{ adguard_home_version }}/AdGuardHome
+    dest: /usr/local/bin/AdGuardHome
+    state: link
+  notify: Restart adguard-home
+
+# Seeded once: AdGuard Home fills in the defaults, migrates and rewrites this
+# file on every settings change, so it is never overwritten afterwards.
+- name: Seed config
+  ansible.builtin.template:
+    src: AdGuardHome.yaml.j2
+    dest: "{{ adguard_home_dir }}/AdGuardHome.yaml"
+    owner: adguardhome
+    group: adguardhome
+    mode: "0600"
+    force: false
+  notify: Restart adguard-home
+  no_log: true
+
+- name: Write systemd unit
+  ansible.builtin.template:
+    src: adguard-home.service.j2
+    dest: /etc/systemd/system/adguard-home.service
+    mode: "0644"
+  notify: Restart adguard-home
+
+- name: Enable adguard-home
+  ansible.builtin.systemd_service:
+    name: adguard-home
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: Apply changes before checking
+  ansible.builtin.meta: flush_handlers
+
+- name: Wait for the web UI
+  ansible.builtin.uri:
+    url: http://127.0.0.1:{{ adguard_home_web_port }}/login.html
+  register: adguard_home_web
+  retries: 15
+  delay: 2
+  until: adguard_home_web.status == 200
