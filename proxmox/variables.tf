@@ -15,12 +15,6 @@ variable "proxmox_ssh_username" {
   default     = "root"
 }
 
-variable "default_proxmox_node" {
-  description = "Proxmox node for VMs that do not set proxmox_node in the inventory"
-  type        = string
-  default     = "proxmox-lade"
-}
-
 variable "datastore_id" {
   description = "Datastore for VM disks"
   type        = string

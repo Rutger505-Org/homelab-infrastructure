@@ -31,7 +31,6 @@ variable "disk_size" {
 variable "data_disk_size" {
   description = "Size in GiB of an empty second disk (scsi1) for data that must outlive the root disk, 0 for none"
   type        = number
-  default     = 0
 }
 
 variable "datastore_id" {

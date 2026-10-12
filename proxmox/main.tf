@@ -1,18 +1,8 @@
 locals {
   inventory = yamldecode(file("${path.module}/../ansible/inventory.yml"))
 
-  vm_defaults = {
-    proxmox_node   = var.default_proxmox_node
-    cores          = 2
-    memory         = 2048
-    disk_size      = 20
-    data_disk_size = 0
-  }
-
-  vms = {
-    for name, host in merge([for group in values(local.inventory.all.children) : group.hosts]...) :
-    name => merge(local.vm_defaults, host)
-  }
+  # No defaults: every host sets its node and specs explicitly.
+  vms = merge([for group in values(local.inventory.all.children) : group.hosts]...)
 
   proxmox_nodes = toset([for vm in values(local.vms) : vm.proxmox_node])
 }
