@@ -14,14 +14,13 @@ All VMs run Debian. The Openclaw VM is the exception and runs Arch.
 
 ## VMs as code
 
-`proxmox/` (OpenTofu) creates every VM with a `vm_id` in `ansible/inventory.yml` from the
+`proxmox/` (OpenTofu) creates every VM listed in `ansible/inventory.yml` from the
 Debian 13 cloud image, with cloud-init only setting up the `debian` user, SSH keys
 and the QEMU guest agent. `ansible/` then configures what runs on it. CI runs both
 on every push to main that touches them.
 
-Only the SeaweedFS VM is managed this way. The Tailscale, k3s and Openclaw VMs are
-still built by hand, see the sections below. They are in the inventory's `manual`
-group so Ansible manages their SSH keys too.
+Only the SeaweedFS VM is managed this way. The Tailscale and k3s VMs are still
+built by hand, see the sections below.
 
 State lives in Cloudflare R2, encrypted with a passphrase, not in k3s, so it stays
 readable when the cluster is gone.
@@ -87,13 +86,10 @@ ansible-playbook playbook.yml
 ### SSH keys
 
 `ssh_authorized_keys` in `ansible/inventory.yml` is the exact `authorized_keys` of
-the login user on every host, managed VMs and `manual` ones alike. Add or remove a
+the login user on every VM in the inventory. Add or remove a
 key there and merge; the deploy rewrites the file on every VM and removes keys that
 are not listed. Keep the `homelab-ci` key, the run refuses a list without it.
 New VMs get the same list through cloud-init.
-
-A `manual` host must have the `homelab-ci` public key authorized once by hand,
-otherwise the deploy cannot log in and fails.
 
 ### Adding a VM
 

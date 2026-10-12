@@ -1,5 +1,5 @@
 - name: Wait for fresh VMs
-  hosts: all:!manual
+  hosts: all
   gather_facts: false
   tasks:
     - name: Wait for SSH

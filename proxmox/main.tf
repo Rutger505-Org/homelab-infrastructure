@@ -1,12 +1,8 @@
 locals {
   inventory = yamldecode(file("${path.module}/../ansible/inventory.yml"))
 
-  # No defaults: every host sets its node and specs explicitly. Hosts without
-  # a vm_id are built by hand and only configured by Ansible.
-  vms = {
-    for name, host in merge([for group in values(local.inventory.all.children) : group.hosts]...) :
-    name => host if can(host.vm_id)
-  }
+  # No defaults: every host sets its node and specs explicitly.
+  vms = merge([for group in values(local.inventory.all.children) : group.hosts]...)
 
   proxmox_nodes = toset([for vm in values(local.vms) : vm.proxmox_node])
 }
