@@ -22,11 +22,10 @@ resource "proxmox_download_file" "debian" {
 
   node_name    = each.key
   datastore_id = var.file_datastore_id
-  content_type = "iso"
+  content_type = "import"
   url          = var.debian_image_url
-  # The iso content type only accepts .img/.iso names; the qcow2 imports fine under .img.
-  file_name = "debian-13-genericcloud-amd64.img"
-  overwrite = false
+  file_name    = "debian-13-genericcloud-amd64.qcow2"
+  overwrite    = false
 }
 
 module "vm" {

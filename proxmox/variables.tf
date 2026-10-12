@@ -28,7 +28,7 @@ variable "datastore_id" {
 }
 
 variable "file_datastore_id" {
-  description = "Datastore with the 'iso' and 'snippets' content types enabled"
+  description = "Datastore with the 'import' and 'snippets' content types enabled"
   type        = string
   default     = "local"
 }
