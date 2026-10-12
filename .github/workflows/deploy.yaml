@@ -8,6 +8,12 @@ on:
       - proxmox/**
       - ansible/**
       - .github/workflows/deploy.yaml
+  # Plan only, so a PR shows what a merge would change before it does.
+  pull_request:
+    paths:
+      - proxmox/**
+      - ansible/**
+      - .github/workflows/deploy.yaml
   workflow_dispatch:
 
 concurrency:
@@ -54,16 +60,26 @@ jobs:
           tofu_version: 1.13.0
           tofu_wrapper: false
 
+      - name: OpenTofu Plan VMs
+        if: github.event_name == 'pull_request'
+        working-directory: ./proxmox
+        run: |
+          tofu init
+          tofu plan -input=false -lock=false
+
       - name: OpenTofu Apply VMs
+        if: github.event_name != 'pull_request'
         working-directory: ./proxmox
         run: |
           tofu init
           tofu apply -input=false -auto-approve
 
       - name: Install Ansible
+        if: github.event_name != 'pull_request'
         run: pipx install ansible-core
 
       - name: Ansible configure VMs
+        if: github.event_name != 'pull_request'
         working-directory: ./ansible
         env:
           SEAWEEDFS_ADMIN_ACCESS_KEY: ${{ secrets.SEAWEEDFS_ADMIN_ACCESS_KEY }}
