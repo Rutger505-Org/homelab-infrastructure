@@ -9,12 +9,12 @@ all:
     # below; keys not listed here are removed on deploy. Also used by
     # cloud-init for new VMs. Must keep the homelab-ci key, CI logs in with it.
     ssh_authorized_keys:
-      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIN6UkH6YxTSa4wR6df7ISkaz0UHmmEswG2M3/8AV5ebL
-      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICaVEo3BA5BZHtu5shSj/aLYBFT5pxkBMOk69lw/ewWK
-      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJWqMziuQxU76b0XIGdBuk48tjN71/D4FGZst0W3Mkya
-      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINxENCrXlBIHDdD8zhZ7slcrrzc6n27LI7Toj8pByzaI
-      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEjR7TTxx7+uSqN/sDVGnRl3Ie2iyDcwmgnptJQ2KxT/
-      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIVzHJcd5YeyJte42gwXJ3LkypK3zkXaOE5ZVz/2fUSW
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIN6UkH6YxTSa4wR6df7ISkaz0UHmmEswG2M3/8AV5ebL rutger@rutger-laptop-omarchy
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICaVEo3BA5BZHtu5shSj/aLYBFT5pxkBMOk69lw/ewWK rutger@rutger-desktop-omarchy
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJWqMziuQxU76b0XIGdBuk48tjN71/D4FGZst0W3Mkya rutger@rutger-cheapcargo-laptop-omarchy
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINxENCrXlBIHDdD8zhZ7slcrrzc6n27LI7Toj8pByzaI rocky@openclaw-vm
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEjR7TTxx7+uSqN/sDVGnRl3Ie2iyDcwmgnptJQ2KxT/ rocky@openclaw-vm
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIVzHJcd5YeyJte42gwXJ3LkypK3zkXaOE5ZVz/2fUSW hermes@hermes
       - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAzdG1/zOJzA5TzmRdGS6O/iCEAirVxAFLAbbYyuJeaN homelab-ci
   children:
     seaweedfs:
