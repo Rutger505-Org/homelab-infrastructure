@@ -1,0 +1,55 @@
+name: Deploy DNS
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - dns/**
+      - .github/workflows/dns.yaml
+  pull_request:
+    paths:
+      - dns/**
+      - .github/workflows/dns.yaml
+  workflow_dispatch:
+
+concurrency:
+  group: dns
+  cancel-in-progress: false
+
+jobs:
+  dns:
+    name: Cloudflare DNS
+    runs-on: ubuntu-latest
+
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      AWS_ENDPOINT_URL_S3: ${{ vars.R2_ENDPOINT }}
+      TF_VAR_state_passphrase: ${{ secrets.TOFU_STATE_PASSPHRASE }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DNS_API_TOKEN }}
+
+    defaults:
+      run:
+        working-directory: ./dns
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup OpenTofu
+        uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: 1.13.0
+          tofu_wrapper: false
+
+      - name: OpenTofu init
+        run: tofu init -input=false
+
+      - name: OpenTofu plan
+        if: github.event_name == 'pull_request'
+        run: tofu plan -input=false -lock=false
+
+      - name: OpenTofu apply
+        if: github.event_name != 'pull_request'
+        run: tofu apply -input=false -auto-approve

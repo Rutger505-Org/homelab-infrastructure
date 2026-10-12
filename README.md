@@ -119,6 +119,31 @@ the rest listens on localhost and nftables drops everything else.
   the exception, Ansible keeps those in sync)
 - No backups yet; set up vzdump or PBS before relying on the data disk alone
 
+## DNS as code
+
+`dns/` (OpenTofu) manages every record in the Cloudflare zones `rutgerpronk.com` and
+`rutgerpronk.nl`. CI plans on pull requests and applies on push to main. It uses the
+same R2 bucket and passphrase as `proxmox/`, under its own state key, so DNS changes
+never wait on a Proxmox plan.
+
+Change records here, not in the Cloudflare dashboard: anything changed by hand shows up
+as drift and is reverted on the next apply.
+
+### One-time setup
+
+1. Create a Cloudflare API token with `Zone : DNS : Edit` and `Zone : Zone : Read` on both zones
+2. Store it as the GitHub secret `CLOUDFLARE_DNS_API_TOKEN`
+
+### Running locally
+
+```sh
+export AWS_ACCESS_KEY_ID=... AWS_SECRET_ACCESS_KEY=... AWS_ENDPOINT_URL_S3=...
+export TF_VAR_state_passphrase=...
+export CLOUDFLARE_API_TOKEN=...
+tofu -chdir=dns init
+tofu -chdir=dns plan
+```
+
 ## Tailscale
 
 1. Create the Tailscale VM (Debian). Enable the QEMU guest agent in the Proxmox panel, at creation or later under VM, Options, QEMU Guest Agent, Enable
