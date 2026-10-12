@@ -22,6 +22,11 @@ on every push to main that touches them.
 Only the SeaweedFS VM is managed this way. The Tailscale and k3s VMs are still
 built by hand, see the sections below.
 
+The hand-built VMs (K3s-1, K3s-2, Tailscale, OpenClaw) are imported into the same
+state by `proxmox/manual-vms.tf`, mirroring their live config. OpenTofu tracks them
+and guards them with `prevent_destroy`, but cannot rebuild them: their OS and
+services are still set up by hand.
+
 State lives in Cloudflare R2, encrypted with a passphrase, not in k3s, so it stays
 readable when the cluster is gone.
 
