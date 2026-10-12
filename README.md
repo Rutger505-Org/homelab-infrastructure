@@ -33,7 +33,8 @@ readable when the cluster is gone.
    pveum acl modify / --users terraform@pve --roles Administrator
    pveum user token add terraform@pve opentofu --privsep 0
    ```
-2. Enable the `Snippets` content type on the `local` storage (Datacenter, Storage, local, Content)
+2. Enable the `Snippets` and `Import` content types on the `local` storage (Datacenter, Storage, local, Content).
+   VM disks are imported from the cloud image, which Proxmox only allows from `import` content.
 3. Generate a CI SSH key with `ssh-keygen -t ed25519 -f homelab-ci -C homelab-ci` and add the
    public key to `/root/.ssh/authorized_keys` on both Proxmox nodes. The API cannot upload
    snippets, so OpenTofu needs SSH for that.
