@@ -1,8 +1,8 @@
 locals {
   inventory = yamldecode(file("${path.module}/../ansible/inventory.yml"))
 
+  # proxmox_node has no default: every host must say which node it runs on.
   vm_defaults = {
-    proxmox_node   = var.default_proxmox_node
     cores          = 2
     memory         = 2048
     disk_size      = 20

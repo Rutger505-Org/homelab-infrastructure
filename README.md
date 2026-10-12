@@ -47,8 +47,6 @@ readable when the cluster is gone.
      `tag:ci` stays limited to the Kubernetes API.
 6. Generate a state passphrase of at least 16 characters and store it in Bitwarden.
    Without it the state cannot be read.
-7. VMs land on node `proxmox-lade` by default; set `proxmox_node` per host in the
-   inventory to place one on the other node.
 
 ### GitHub configuration
 
@@ -89,8 +87,9 @@ ansible-playbook playbook.yml
 
 ### Adding a VM
 
-Add a group and host to `ansible/inventory.yml` with `ansible_host` and `vm_id`
-(`cores`, `memory`, `disk_size`, `data_disk_size` and `proxmox_node` are optional),
+Add a group and host to `ansible/inventory.yml` with `ansible_host`, `vm_id` and
+`proxmox_node` (the Proxmox node name, e.g. `proxmox-lade`; there is no default).
+`cores`, `memory`, `disk_size` and `data_disk_size` are optional,
 add a play for the group to `ansible/playbook.yml` and push.
 
 Every VM has `prevent_destroy`: removing it from the inventory, `tofu destroy` or a
