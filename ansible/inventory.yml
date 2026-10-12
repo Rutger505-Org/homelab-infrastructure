@@ -1,0 +1,16 @@
+# Single source of truth for the managed VMs: OpenTofu creates a VM for every
+# host below, Ansible configures it. vm_id, proxmox_node, cores, memory,
+# disk_size and data_disk_size are read by OpenTofu only.
+all:
+  vars:
+    ansible_user: debian
+  children:
+    seaweedfs:
+      hosts:
+        seaweedfs-server:
+          ansible_host: 192.168.178.214
+          vm_id: 904
+          cores: 1
+          memory: 1024
+          disk_size: 10
+          data_disk_size: 60

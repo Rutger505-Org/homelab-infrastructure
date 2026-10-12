@@ -1,0 +1,13 @@
+{{ {
+  "identities": [
+    {
+      "name": "admin",
+      "credentials": [{"accessKey": seaweedfs_admin_access_key, "secretKey": seaweedfs_admin_secret_key}],
+      "actions": ["Admin", "Read", "List", "Tagging", "Write"]
+    },
+    {
+      "name": "anonymous",
+      "actions": seaweedfs_buckets | map('regex_replace', '^', 'Read:') | list
+    }
+  ]
+} | to_nice_json }}
