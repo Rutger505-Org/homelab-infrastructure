@@ -111,6 +111,12 @@ resource "proxmox_virtual_environment_vm" "this" {
     prevent_destroy = true
 
     # Re-downloading the base image must not rebuild every existing VM.
-    ignore_changes = [disk[0].import_from]
+    # Cloud-init only runs on first boot and Ansible owns the config after
+    # that (e.g. ssh_authorized_keys), so a changed snippet must not force a
+    # replacement either. New VMs still get the current snippet.
+    ignore_changes = [
+      disk[0].import_from,
+      initialization[0].user_data_file_id,
+    ]
   }
 }
