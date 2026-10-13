@@ -20,7 +20,7 @@ cloud-init only setting up the login user, SSH keys and the QEMU guest agent.
 `ansible/` then configures what runs on it. CI runs both on every push to main
 that touches them.
 
-Managed this way: SeaweedFS, Home Assistant, AdGuard Home, and the replacements for
+Managed this way: SeaweedFS, Home Assistant, AdGuard Home, the reverse proxy, and the replacements for
 the hand-built VMs (k3s-1, k3s-2, tailscale, openclaw). Until those are cut over (see
 below), the hand-built originals keep running.
 
@@ -72,6 +72,8 @@ Secrets:
 - `MQTT_USERNAME`, `MQTT_PASSWORD`: Mosquitto login on the Home Assistant VM
 - `ADGUARD_ADMIN_PASSWORD_HASH`: bcrypt hash of the AdGuard Home web UI password
 - `ADGUARD_ADMIN_PASSWORD`: the same password in plain text, for `internal-dns/`
+- `CLOUDFLARE_DNS_API_TOKEN` (shared with `dns/`): the reverse proxy uses it for the DNS-01
+  challenge of its wildcard certificate
 
 Variables:
 - `R2_ENDPOINT`: `https://<account-id>.r2.cloudflarestorage.com`
@@ -96,6 +98,7 @@ export OPENCLAW_ENV="$(cat .env)" OPENCLAW_SSH_PRIVATE_KEY="$(cat id_ed25519)"
 export MQTT_USERNAME=<mqtt user>
 export MQTT_PASSWORD=<mqtt password>
 export ADGUARD_ADMIN_PASSWORD_HASH='<bcrypt hash>'
+export CLOUDFLARE_API_TOKEN=<cloudflare dns token>
 
 tofu -chdir=proxmox init
 tofu -chdir=proxmox apply
@@ -198,6 +201,26 @@ reachable; nftables drops everything else.
   DHCP, the modem stays the only DHCP server. If the modem has no DNS field, set it per device
 - Single instance: when the VM is down, LAN clients lose DNS. Set the modem's DNS back to
   automatic to fall back
+
+### Reverse proxy
+
+`reverse-proxy` (`.207`, id 907, on `proxmox-prodesk`) runs Caddy for
+`https://<service>.homelab.rutgerpronk.com`: one wildcard certificate from Let's Encrypt
+through a Cloudflare DNS-01 challenge, so nothing is exposed to the internet. Only SSH,
+80 (redirects to https) and 443 are reachable.
+
+- Add a service: an entry in `caddy_routes` in the role defaults. The AdGuard wildcard
+  rewrite already points every name here, so no DNS change is needed
+- Upstreams with self-signed certificates (Proxmox) set `insecure_tls`
+- Upgrade: bump `caddy_version`. The binary comes from caddyserver.com's download service
+  with the `caddy-dns/cloudflare` module; it builds on request and takes a few minutes
+- Some apps must trust the proxy before they accept proxied requests:
+  - Home Assistant: in `configuration.yaml`, `http:` with `use_x_forwarded_for: true` and
+    `trusted_proxies: [192.168.178.207]`
+  - OpenClaw: `https://openclaw.homelab.rutgerpronk.com` in
+    `gateway.controlUi.allowedOrigins` and `192.168.178.207` in `gateway.trustedProxies`
+- Grafana goes through Traefik with `Host: grafana.rutgerpronk.com`, so it still redirects
+  to that public name in places, until it gets its own internal route
 
 ### Known limits
 
@@ -305,13 +328,10 @@ tofu -chdir=dns plan
 
 ## Internal DNS
 
-`internal-dns/` (OpenTofu, `gmichels/adguard` provider) manages DNS rewrites in AdGuard Home:
-`<service>.homelab.rutgerpronk.com` resolves to the LAN address for every client that uses
-AdGuard Home as DNS server. Add a service to `records` in `internal-dns/main.tf` and merge.
+`internal-dns/` (OpenTofu, `gmichels/adguard` provider) manages DNS rewrites in AdGuard Home.
+`*.homelab.rutgerpronk.com` resolves to the reverse proxy for every client that uses
+AdGuard Home as DNS server; new services only need a route there, not a DNS change.
 
-- DNS has no ports: `https://proxmox-lade.homelab.rutgerpronk.com:8006`,
-  `http://openclaw.homelab.rutgerpronk.com:18789`
-- `grafana` points at Traefik, which still needs a route for that host
 - Applied on every push to `internal-dns/` and after every successful homelab deploy, so a
   rebuilt AdGuard VM gets its rewrites back. Rewrites added by hand in the web UI are left alone
 - Own state key in the same R2 bucket and passphrase

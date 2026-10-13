@@ -61,3 +61,9 @@
   become: true
   roles:
     - adguard_home
+
+- name: Install reverse proxy
+  hosts: reverse_proxy
+  become: true
+  roles:
+    - caddy
