@@ -159,10 +159,11 @@ reachable; nftables drops everything else.
 - Password: the seed only takes a bcrypt hash, e.g. `htpasswd -nbBC 10 "" <password> | tr -d ':\n'`.
   Changing the secret does not change the password of a running instance.
 - Upgrade: bump `adguard_home_version`; the built-in updater is off
-- Clients only use it once the FritzBox hands it out: Home Network, Network, Network
-  Settings, IPv4 Settings, Local DNS server `192.168.178.205`
-- Single instance: when the VM is down, LAN clients lose DNS. Point the FritzBox back at
-  itself to fall back
+- Clients only use it once the Ziggo modem hands it out as DNS server: set
+  `192.168.178.205` by hand in the modem's DHCP/LAN settings. AdGuard Home does not run
+  DHCP, the modem stays the only DHCP server. If the modem has no DNS field, set it per device
+- Single instance: when the VM is down, LAN clients lose DNS. Set the modem's DNS back to
+  automatic to fall back
 
 ### Known limits
 
