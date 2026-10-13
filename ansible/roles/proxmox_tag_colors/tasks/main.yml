@@ -1,0 +1,16 @@
+# Tag colors are a datacenter option (/etc/pve/datacenter.cfg), shared by
+# every node in the cluster, so set them once. This owns the whole tag-style
+# value: tag-style settings made in the UI get overwritten.
+- name: Read the current tag style
+  ansible.builtin.command:
+    argv: [grep, -x, "tag-style: .*", /etc/pve/datacenter.cfg]
+  register: proxmox_tag_colors_current
+  changed_when: false
+  failed_when: proxmox_tag_colors_current.rc > 1
+  run_once: true
+
+- name: Set the tag colors
+  ansible.builtin.command:
+    argv: [pvesh, set, /cluster/options, --tag-style, "{{ proxmox_tag_colors_style }}"]
+  when: "proxmox_tag_colors_current.stdout != 'tag-style: ' ~ proxmox_tag_colors_style"
+  run_once: true

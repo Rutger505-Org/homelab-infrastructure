@@ -46,7 +46,9 @@ resource "proxmox_virtual_environment_vm" "this" {
   vm_id       = var.vm_id
   node_name   = var.node_name
   description = "Managed by OpenTofu (homelab-infrastructure)"
-  tags        = ["opentofu"]
+  # The node tag shows where a VM runs; colors are set per node in
+  # ansible/proxmox-inventory.yml.
+  tags = ["opentofu", var.node_name]
 
   stop_on_destroy = true
 

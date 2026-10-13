@@ -116,6 +116,12 @@ CI runs it after the VM playbook; locally:
   (`/etc/apt/apt.conf.d/no-nag-script`) re-runs it after every upgrade. The run
   fails if a widget toolkit update changes the code so the patch no longer applies.
   Hard-refresh the browser (Ctrl+Shift+R) after the first run.
+- Tag colors: OpenTofu tags every VM with the node it runs on (`proxmox-lade`,
+  `proxmox-prodesk`), next to `opentofu` on the VMs it created. The colors are
+  a datacenter option set once for the cluster: `opentofu` in the
+  `proxmox_tag_colors` role defaults, each node tag through `proxmox_tag_color`
+  in `ansible/proxmox-inventory.yml`. The role owns the whole `tag-style`
+  value, so tag style changes made in the UI get overwritten.
 
 ### SSH keys
 
