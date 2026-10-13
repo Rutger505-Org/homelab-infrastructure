@@ -3,7 +3,9 @@
     that:
       - k3s_role in ['server', 'agent']
       - k3s_token | length > 0
-    fail_msg: Set K3S_TOKEN, and k3s_role to server or agent on the play.
+      # A real bundle is a few KB; an empty one means the export failed.
+      - k3s_role == 'agent' or k3s_ca_bundle | length > 1000
+    fail_msg: Set K3S_TOKEN and K3S_CA_BUNDLE, and k3s_role to server or agent on the play.
     quiet: true
   no_log: true
 
@@ -26,7 +28,7 @@
 # k3s only uses CAs that are on disk before its first start, and never
 # replaces them after.
 - name: Restore the cluster CAs
-  when: k3s_role == 'server' and k3s_ca_bundle | length > 0
+  when: k3s_role == 'server'
   block:
     - name: Check for existing CAs
       ansible.builtin.stat:

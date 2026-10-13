@@ -65,7 +65,7 @@ Secrets:
 - `TAILSCALE_CI_HOMELAB_OAUTH_CLIENT_ID`, `TAILSCALE_CI_HOMELAB_OAUTH_SECRET`: the `tag:ci-homelab` client
 - `SEAWEEDFS_ADMIN_ACCESS_KEY`, `SEAWEEDFS_ADMIN_SECRET_KEY`: S3 admin credentials
 - `K3S_TOKEN`: shared secret the k3s agents join with, e.g. `openssl rand -hex 32`
-- `K3S_CA_BUNDLE`: the cluster CAs, see k3s. Optional, but without it every rebuild needs new kubeconfigs
+- `K3S_CA_BUNDLE`: the cluster CAs, see k3s
 - `TAILSCALE_ROUTER_OAUTH_SECRET`: OAuth client secret for the subnet router, see Tailscale router
 - `OPENCLAW_ENV`: contents of `~/.openclaw/.env` on the OpenClaw VM
 - `OPENCLAW_SSH_PRIVATE_KEY`: SSH key of the OpenClaw VM, with access to `Rutger505/dev-env` and `Rutger505/openclaw-config`
@@ -213,15 +213,18 @@ only pointed at `https://192.168.178.211:6443`. Service account tokens do not su
 rebuild, they belong to objects in the old cluster; kubernetes-infrastructure recreates them.
 The secret holds the CA private keys, which give full admin access to the cluster.
 
-Export the CAs from a running server (here the hand-built K3s-1):
+Export the CAs from a running server (here the hand-built K3s-1). sudo asks for a
+password, so pack them first and upload in a second step:
 
 ```bash
-ssh k3s@192.168.178.201 'sudo sh -c "cd /var/lib/rancher/k3s/server/tls && tar -czf - *-ca.crt *-ca.key service*.key \$(ls -d etcd/*-ca.* 2>/dev/null)"' \
-  | base64 -w0 | gh secret set K3S_CA_BUNDLE -R Rutger505-Org/homelab-infrastructure
+ssh -t k3s@192.168.178.201 'sudo sh -c "cd /var/lib/rancher/k3s/server/tls && tar -czf ~k3s/k3s-ca.tar.gz *-ca.crt *-ca.key service*.key \$(ls -d etcd/*-ca.* 2>/dev/null) && chown k3s ~k3s/k3s-ca.tar.gz"'
+ssh k3s@192.168.178.201 'tar -tzf k3s-ca.tar.gz'   # expect server-ca.key, client-ca.key, ...
+ssh k3s@192.168.178.201 'base64 -w0 k3s-ca.tar.gz && rm k3s-ca.tar.gz' \
+  | gh secret set K3S_CA_BUNDLE -R Rutger505-Org/homelab-infrastructure
 ```
 
-Without the secret k3s generates new CAs; get the kubeconfig with
-`sudo cat /etc/rancher/k3s/k3s.yaml` on k3s-1, `127.0.0.1` replaced by `192.168.178.211`.
+The role refuses to install the server without it, so a failed export cannot quietly
+start a cluster with new CAs.
 
 ### Tailscale router
 
