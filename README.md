@@ -42,11 +42,11 @@ cloud-init only setting up the login user, SSH keys and the QEMU guest agent.
 `ansible/` then configures what runs on it. CI runs both on every push to main
 that touches them.
 
-Managed this way: SeaweedFS, Home Assistant, AdGuard Home, the reverse proxy, and the replacements for
-the hand-built VMs (k3s-1, k3s-2, tailscale, openclaw). Until those are cut over (see
-below), the hand-built originals keep running.
+Managed this way: SeaweedFS, Home Assistant, AdGuard Home, the reverse proxy, k3s-1,
+k3s-2, and the replacements for the hand-built VMs (tailscale, openclaw). Until those
+are cut over (see below), the hand-built originals keep running.
 
-The hand-built VMs (K3s-1, K3s-2, Tailscale, OpenClaw) are imported into the same
+The hand-built VMs (Tailscale, OpenClaw) are imported into the same
 state by `proxmox/manual-vms.tf`, mirroring their live config. OpenTofu tracks them
 and guards them with `prevent_destroy`, but cannot rebuild them: their OS and
 services were set up by hand.
@@ -313,7 +313,7 @@ off while the old VM runs: two Gateways with the same channel credentials both a
 
 The new VMs run next to the old ones, with their own ids and addresses. Per VM:
 
-1. k3s: back up the PVCs, shut the old VMs down, then move k3s-1/k3s-2 to their
+1. k3s (done): back up the PVCs, shut the old VMs down, then move k3s-1/k3s-2 to their
    addresses (`.201`/`.202`). The `KUBECONFIG` secret, `4-rbac` and the `tag:ci` grant
    keep working. Rerun the kubernetes-infrastructure deploys, restore the data,
    regenerate service account kubeconfigs
@@ -322,7 +322,10 @@ The new VMs run next to the old ones, with their own ids and addresses. Per VM:
    `openclaw_gateway_enabled: true`, update the monitoring target (`.206:18789`) and the
    `openclaw` record in `internal-dns/main.tf`
 4. Remove the old VM from `proxmox/manual-vms.tf` with a `removed` block
-   (`lifecycle { destroy = false }`), then delete it in Proxmox
+   (`lifecycle { destroy = false }`), then delete it in Proxmox. Already deleted in
+   Proxmox (as K3s-1/K3s-2 were): delete its entry in `manual-vms.tf` before the next
+   deploy. The refresh drops it from state; left in, the next apply would create an
+   empty VM with its id
 
 ## DNS as code
 
@@ -374,27 +377,6 @@ Replaced by the managed VMs above, kept until the cutover.
 3. Configure authorized keys
 4. Configure 192.168.178.203 as static IP
 5. Log in remotely, install Tailscale, and log in
-
-### Kubernetes
-
-1. Create 2 K3s VMs (Debian). Enable the QEMU guest agent in the Proxmox panel, at creation or later under VM, Options, QEMU Guest Agent, Enable
-2. Create Bitwarden entries for both
-3. Configure authorized keys
-4. Configure 201 and 202 as static IP addresses
-5. Install K3s on 201
-6. Disable the bundled ServiceLB on master node
-```bash
-sudo tee -a /etc/rancher/k3s/config.yaml <<'EOF'
-disable:
-  - servicelb
-EOF
-sudo systemctl restart k3s
-# no svclb-* daemonsets should remain
-kubectl get ds -n kube-system | grep svclb
-```
-7. Install K3s on 202 as slave (look at official docs)
-8. Copy kubeconfig to the Bitwarden entry
-9. Configure the GitHub org with the new kubeconfig
 
 ### Openclaw
 

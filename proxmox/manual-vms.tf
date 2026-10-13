@@ -4,26 +4,6 @@
 # The one exception is the node tag, which only changes metadata.
 locals {
   manual_vms = {
-    k3s-1 = {
-      name      = "K3s-1"
-      vm_id     = 100
-      node_name = "proxmox-lade"
-      cores     = 4
-      memory    = 6144
-      disk_size = 20
-      mac       = "BC:24:11:38:B1:E2"
-      cdrom     = "none"
-    }
-    k3s-2 = {
-      name      = "K3s-2"
-      vm_id     = 101
-      node_name = "proxmox-prodesk"
-      cores     = 4
-      memory    = 6144
-      disk_size = 20
-      mac       = "BC:24:11:45:DF:DD"
-      cdrom     = "none"
-    }
     tailscale = {
       name      = "Tailscale"
       vm_id     = 102
@@ -107,5 +87,8 @@ resource "proxmox_virtual_environment_vm" "manual" {
   lifecycle {
     # Hand-built with no way to recreate them from code: never destroy or replace.
     prevent_destroy = true
+    # Power state is managed by hand: during cutover the old VMs are shut down
+    # and must stay down, their addresses are reused by the managed VMs.
+    ignore_changes = [started]
   }
 }
