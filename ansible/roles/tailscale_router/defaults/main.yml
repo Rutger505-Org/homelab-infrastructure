@@ -1,0 +1,8 @@
+# OAuth client secret with the auth_keys write scope and tailscale_router_tag.
+# Unlike an auth key it never expires, so a rebuild can always rejoin.
+tailscale_router_oauth_secret: "{{ lookup('ansible.builtin.env', 'TAILSCALE_ROUTER_OAUTH_SECRET') }}"
+# Already in the tailnet policy, with autoApprovers for the LAN route.
+tailscale_router_tag: tag:homelab
+# Approved automatically through autoApprovers in the tailnet policy.
+tailscale_router_routes:
+  - 192.168.178.0/24

@@ -2,7 +2,7 @@
 
 Notes for setting up the home lab (again..).
 
-All VMs run Debian. The Openclaw VM is the exception and runs Arch.
+All VMs run Debian. The OpenClaw VM is the exception and runs Arch.
 
 ## Proxmox
 
@@ -15,17 +15,19 @@ All VMs run Debian. The Openclaw VM is the exception and runs Arch.
 ## VMs as code
 
 `proxmox/` (OpenTofu) creates every VM listed in `ansible/inventory.yml` from the
-Debian 13 cloud image, with cloud-init only setting up the `debian` user, SSH keys
-and the QEMU guest agent. `ansible/` then configures what runs on it. CI runs both
-on every push to main that touches them.
+Debian 13 cloud image (or the Arch cloud image for hosts with `os: arch`), with
+cloud-init only setting up the login user, SSH keys and the QEMU guest agent.
+`ansible/` then configures what runs on it. CI runs both on every push to main
+that touches them.
 
-Only the SeaweedFS, Home Assistant and AdGuard Home VMs are managed this way. The Tailscale and k3s VMs are still
-built by hand, see the sections below.
+Managed this way: SeaweedFS, Home Assistant, AdGuard Home, and the replacements for
+the hand-built VMs (k3s-1, k3s-2, tailscale, openclaw). Until those are cut over (see
+below), the hand-built originals keep running.
 
 The hand-built VMs (K3s-1, K3s-2, Tailscale, OpenClaw) are imported into the same
 state by `proxmox/manual-vms.tf`, mirroring their live config. OpenTofu tracks them
 and guards them with `prevent_destroy`, but cannot rebuild them: their OS and
-services are still set up by hand.
+services were set up by hand.
 
 State lives in Cloudflare R2, encrypted with a passphrase, not in k3s, so it stays
 readable when the cluster is gone.
@@ -62,6 +64,11 @@ Secrets:
 - `HOMELAB_SSH_PRIVATE_KEY`: the CI private key
 - `TAILSCALE_CI_HOMELAB_OAUTH_CLIENT_ID`, `TAILSCALE_CI_HOMELAB_OAUTH_SECRET`: the `tag:ci-homelab` client
 - `SEAWEEDFS_ADMIN_ACCESS_KEY`, `SEAWEEDFS_ADMIN_SECRET_KEY`: S3 admin credentials
+- `K3S_TOKEN`: shared secret the k3s agents join with, e.g. `openssl rand -hex 32`
+- `K3S_CA_BUNDLE`: the cluster CAs, see k3s
+- `TAILSCALE_ROUTER_OAUTH_SECRET`: OAuth client secret for the subnet router, see Tailscale router
+- `OPENCLAW_ENV`: contents of `~/.openclaw/.env` on the OpenClaw VM
+- `OPENCLAW_SSH_PRIVATE_KEY`: SSH key of the OpenClaw VM, with access to `Rutger505/dev-env` and `Rutger505/openclaw-config`
 - `MQTT_USERNAME`, `MQTT_PASSWORD`: Mosquitto login on the Home Assistant VM
 - `ADGUARD_ADMIN_PASSWORD_HASH`: bcrypt hash of the AdGuard Home web UI password
 - `ADGUARD_ADMIN_PASSWORD`: the same password in plain text, for `internal-dns/`
@@ -84,6 +91,8 @@ export PROXMOX_VE_ENDPOINT=https://192.168.178.200:8006/
 export PROXMOX_VE_API_TOKEN='terraform@pve!opentofu=<secret>'
 export SEAWEEDFS_ADMIN_ACCESS_KEY=<access key>
 export SEAWEEDFS_ADMIN_SECRET_KEY=<secret key>
+export K3S_TOKEN=<token> TAILSCALE_ROUTER_OAUTH_SECRET=<secret>
+export OPENCLAW_ENV="$(cat .env)" OPENCLAW_SSH_PRIVATE_KEY="$(cat id_ed25519)"
 export MQTT_USERNAME=<mqtt user>
 export MQTT_PASSWORD=<mqtt password>
 export ADGUARD_ADMIN_PASSWORD_HASH='<bcrypt hash>'
@@ -123,9 +132,13 @@ Add a group and host to `ansible/inventory.yml` with `ansible_host`, `vm_id`,
 `data_disk_size` (GiB, `0` for none). All are required, there are no defaults;
 add a play for the group to `ansible/playbook.yml` and push.
 
+Optional: `os: arch` for the Arch cloud image (default `debian`), and
+`ansible_user` to name the login user something other than `debian`. On Arch it
+is in `wheel` instead of `sudo`.
+
 Every VM has `prevent_destroy`: removing it from the inventory, `tofu destroy` or a
 change that forces a rebuild fails the run. Remove that line in
-`proxmox/modules/debian-vm/main.tf` on purpose to rebuild one.
+`proxmox/modules/vm/main.tf` on purpose to rebuild one.
 
 ### SeaweedFS
 
@@ -186,6 +199,79 @@ reachable; nftables drops everything else.
   the exception, Ansible keeps those in sync)
 - No backups yet; set up vzdump or PBS before relying on the data disk alone
 
+### k3s
+
+`k3s-1` (`.211`, id 911) is the server, `k3s-2` (`.212`, id 912) joins it as an agent
+with `K3S_TOKEN`. Same version as the hand-built cluster (`k3s_version` in the role
+defaults, bump to upgrade), with ServiceLB disabled for MetalLB. Workloads come from
+kubernetes-infrastructure; PVCs (`local-path`) live on the root disk, so a rebuild
+loses them.
+
+The cluster CAs come from `K3S_CA_BUNDLE` and are put in place before k3s first starts,
+so a rebuilt server signs with the same CAs: existing admin kubeconfigs keep working,
+only pointed at `https://192.168.178.211:6443`. Service account tokens do not survive a
+rebuild, they belong to objects in the old cluster; kubernetes-infrastructure recreates them.
+The secret holds the CA private keys, which give full admin access to the cluster.
+
+Export the CAs from a running server (here the hand-built K3s-1). sudo asks for a
+password, so pack them first and upload in a second step:
+
+```bash
+ssh -t k3s@192.168.178.201 'sudo sh -c "cd /var/lib/rancher/k3s/server/tls && tar -czf ~k3s/k3s-ca.tar.gz *-ca.crt *-ca.key service*.key \$(ls -d etcd/*-ca.* 2>/dev/null) && chown k3s ~k3s/k3s-ca.tar.gz"'
+ssh k3s@192.168.178.201 'tar -tzf k3s-ca.tar.gz'   # expect server-ca.key, client-ca.key, ...
+ssh k3s@192.168.178.201 'base64 -w0 k3s-ca.tar.gz && rm k3s-ca.tar.gz' \
+  | gh secret set K3S_CA_BUNDLE -R Rutger505-Org/homelab-infrastructure
+```
+
+The role refuses to install the server without it, so a failed export cannot quietly
+start a cluster with new CAs.
+
+### Tailscale router
+
+`tailscale` (`.213`, id 913) advertises `192.168.178.0/24` as `tag:homelab`.
+It joins with an OAuth client secret instead of an auth key, which never expires, so
+a rebuilt VM can always rejoin. The tailnet policy already owns `tag:homelab` and
+auto-approves the route for it. One-time setup:
+
+- create an OAuth client with the `auth_keys` write scope and `tag:homelab`,
+  store its secret as `TAILSCALE_ROUTER_OAUTH_SECRET`
+
+Two routers for the same subnet fail over to each other, so it can run next to the
+old one. CI reaches the LAN through this router: when it is down, run locally.
+
+### OpenClaw
+
+`openclaw` (`.210`, id 910) runs Arch from the Arch cloud image, with `openclaw` as
+login user. Ansible installs the packages and yay, enables lingering, writes the
+GitHub key and `~/.openclaw/.env`, sets up the openclaw-config checkout with its
+sync timer, clones dev-env and installs OpenClaw.
+
+Not automated:
+
+- dev-env's `install.sh` is interactive, run it once by hand
+- `.env` is only written when missing, the sync adds secrets to it on the VM. Update
+  `OPENCLAW_ENV` when it changes, or a rebuild comes up without them
+- State outside the config repo (sessions, memory, channel credentials in
+  `~/.openclaw`) is not backed up. Copy it over by hand
+
+The Gateway service is only installed with `openclaw_gateway_enabled: true`. Keep it
+off while the old VM runs: two Gateways with the same channel credentials both answer.
+
+### Cutover from the hand-built VMs
+
+The new VMs run next to the old ones, with their own ids and addresses. Per VM:
+
+1. k3s: back up the PVCs, point the `KUBECONFIG` secret of the GitHub org and the
+   `4-rbac` API address (`.201`) in kubernetes-infrastructure and the `tag:ci` grant
+   (and its test) in the tailnet policy at `.211`, rerun its
+   deploys, restore the data, regenerate service account kubeconfigs
+2. Tailscale: check the new router shows the route as approved, then shut the old one down
+3. OpenClaw: stop the old Gateway, copy `~/.openclaw` over, set
+   `openclaw_gateway_enabled: true`, update the monitoring target (`.206:18789`) and the
+   `openclaw` record in `internal-dns/main.tf`
+4. Remove the old VM from `proxmox/manual-vms.tf` with a `removed` block
+   (`lifecycle { destroy = false }`), then delete it in Proxmox
+
 ## DNS as code
 
 `dns/` (OpenTofu) manages every record in the Cloudflare zones `rutgerpronk.com` and
@@ -228,7 +314,11 @@ One-time setup:
 - GitHub secret `ADGUARD_ADMIN_PASSWORD`: the AdGuard Home web UI password (plain text)
 - Tailnet policy: allow `tag:ci-homelab` to reach `192.168.178.205:80`
 
-## Tailscale
+## Hand-built VMs
+
+Replaced by the managed VMs above, kept until the cutover.
+
+### Tailscale
 
 1. Create the Tailscale VM (Debian). Enable the QEMU guest agent in the Proxmox panel, at creation or later under VM, Options, QEMU Guest Agent, Enable
 2. Create Bitwarden Tailscale username, password
@@ -236,7 +326,7 @@ One-time setup:
 4. Configure 192.168.178.203 as static IP
 5. Log in remotely, install Tailscale, and log in
 
-## Kubernetes
+### Kubernetes
 
 1. Create 2 K3s VMs (Debian). Enable the QEMU guest agent in the Proxmox panel, at creation or later under VM, Options, QEMU Guest Agent, Enable
 2. Create Bitwarden entries for both
@@ -257,10 +347,10 @@ kubectl get ds -n kube-system | grep svclb
 8. Copy kubeconfig to the Bitwarden entry
 9. Configure the GitHub org with the new kubeconfig
 
-## Openclaw
+### Openclaw
 
 1. Create the VM (Arch). Enable the QEMU guest agent in the Proxmox panel, at creation or later under VM, Options, QEMU Guest Agent, Enable
 2. Create Bitwarden entries for the password
 3. Configure authorized keys
-4. Configure 204 as static IP address
+4. Configure 206 as static IP address
 5. Install openclaw

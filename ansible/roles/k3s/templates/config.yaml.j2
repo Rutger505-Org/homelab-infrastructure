@@ -1,0 +1,9 @@
+token: {{ k3s_token }}
+{% if k3s_role == 'server' %}
+write-kubeconfig-mode: "0600"
+# MetalLB hands out LoadBalancer IPs instead.
+disable:
+  - servicelb
+{% else %}
+server: https://{{ k3s_server_address }}:6443
+{% endif %}

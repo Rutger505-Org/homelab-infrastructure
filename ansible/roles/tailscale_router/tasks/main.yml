@@ -1,0 +1,74 @@
+- name: Install repository dependencies
+  ansible.builtin.apt:
+    name: python3-debian
+    update_cache: true
+
+- name: Add Tailscale repository
+  ansible.builtin.deb822_repository:
+    name: tailscale
+    uris: https://pkgs.tailscale.com/stable/debian
+    suites: "{{ ansible_facts.distribution_release }}"
+    components: main
+    signed_by: https://pkgs.tailscale.com/stable/debian/{{ ansible_facts.distribution_release }}.noarmor.gpg
+
+- name: Install Tailscale
+  ansible.builtin.apt:
+    name: tailscale
+    update_cache: true
+
+- name: Enable IP forwarding
+  ansible.builtin.copy:
+    dest: /etc/sysctl.d/99-tailscale.conf
+    content: |
+      net.ipv4.ip_forward = 1
+      net.ipv6.conf.all.forwarding = 1
+    mode: "0644"
+  notify: Apply sysctl
+
+- name: Flush sysctl before joining
+  ansible.builtin.meta: flush_handlers
+
+- name: Start tailscaled on boot
+  ansible.builtin.systemd_service:
+    name: tailscaled
+    enabled: true
+    state: started
+
+- name: Read Tailscale state
+  ansible.builtin.command: tailscale status --json
+  register: tailscale_router_status
+  changed_when: false
+  failed_when: false
+
+- name: Check whether the node is logged in
+  ansible.builtin.set_fact:
+    tailscale_router_joined: "{{ (tailscale_router_status.stdout | default('{}', true) | from_json).BackendState | default('') == 'Running' }}"
+
+- name: Check OAuth secret
+  ansible.builtin.assert:
+    that: tailscale_router_oauth_secret | length > 0
+    fail_msg: Set TAILSCALE_ROUTER_OAUTH_SECRET to join the tailnet.
+    quiet: true
+  no_log: true
+  when: not tailscale_router_joined
+
+# Only on first boot: a logged-in node keeps its identity across runs.
+- name: Join the tailnet
+  ansible.builtin.command:
+    argv:
+      - tailscale
+      - up
+      - --auth-key={{ tailscale_router_oauth_secret }}?ephemeral=false&preauthorized=true
+      - --advertise-tags={{ tailscale_router_tag }}
+      - --hostname={{ inventory_hostname }}
+  no_log: true
+  when: not tailscale_router_joined
+  changed_when: true
+
+- name: Advertise the LAN
+  ansible.builtin.command:
+    argv:
+      - tailscale
+      - set
+      - --advertise-routes={{ tailscale_router_routes | join(',') }}
+  changed_when: false
