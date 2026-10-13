@@ -40,7 +40,7 @@ instance and applies the address (and generates new SSH host keys).
 Debian 13 cloud image (or the Arch cloud image for hosts with `os: arch`), with
 cloud-init only setting up the login user, SSH keys and the QEMU guest agent.
 `ansible/` then configures what runs on it. CI runs both on every push to main
-that touches them.
+that touches them (see CI below).
 
 Managed this way: SeaweedFS, Home Assistant, AdGuard Home, the reverse proxy, k3s-1,
 k3s-2, and the replacements for the hand-built VMs (tailscale, openclaw). Until those
@@ -128,12 +128,32 @@ cd ansible
 ansible-playbook playbook.yml
 ```
 
+### CI
+
+`.github/workflows/deploy.yaml` runs OpenTofu, then one Ansible job per service, in
+parallel. Each job runs the playbook limited to its inventory group, so a failing
+service does not stop the others. `.github/deploy-services.yaml` maps changed files
+to services: a role change deploys that service only, while a change to the
+inventory, `playbook.yml`, `ansible.cfg`, the `ssh_keys` role or `proxmox/` deploys
+every VM service. Run the workflow by hand to deploy everything, e.g. to undo manual
+changes on a VM.
+
+- Push to main: `tofu apply` and `ansible-playbook --diff`.
+- Pull request: `tofu plan` and `ansible-playbook --check --diff` against the live
+  VMs. VMs the PR adds are skipped, since they do not exist yet. Read-only probe
+  commands (`blkid`, `k3s --version` and so on) need `check_mode: false`;
+  otherwise check mode skips them and the tasks after them report changes that
+  will not happen.
+- Logs only show tasks that changed something.
+- Deploys queue behind each other. PR runs use their own concurrency group, so they
+  never hold up a deploy, and a new push cancels the PR's running check.
+
 ### Proxmox nodes
 
 `ansible/proxmox.yml` configures the nodes themselves over root SSH (the
 `homelab-ci` key from the one-time setup), using `ansible/proxmox-inventory.yml`.
 That is a separate inventory so OpenTofu and the VM plays never see the nodes.
-CI runs it after the VM playbook; locally:
+CI runs it as the `proxmox` service; locally:
 `ansible-playbook -i proxmox-inventory.yml proxmox.yml`.
 
 - Subscription nag: `/usr/local/bin/pve-remove-nag.sh` patches the "No valid
@@ -161,7 +181,8 @@ New VMs get the same list through cloud-init.
 Add a group and host to `ansible/inventory.yml` with `ansible_host`, `vm_id`,
 `proxmox_node` (e.g. `proxmox-lade`), `cores`, `memory` (MiB), `disk_size` and
 `data_disk_size` (GiB, `0` for none). All are required, there are no defaults;
-add a play for the group to `ansible/playbook.yml` and push.
+add a play for the group to `ansible/playbook.yml`, add the group with its role
+path to `.github/deploy-services.yaml` and push.
 
 Optional: `os: arch` for the Arch cloud image (default `debian`), and
 `ansible_user` to name the login user something other than `debian`. On Arch it

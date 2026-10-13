@@ -7,22 +7,59 @@ on:
     paths:
       - proxmox/**
       - ansible/**
+      - .github/deploy-services.yaml
       - .github/workflows/deploy.yaml
-  # Plan only, so a PR shows what a merge would change before it does.
+  # Plan and Ansible check mode only, so a PR shows what a merge would change
+  # before it does.
   pull_request:
     paths:
       - proxmox/**
       - ansible/**
+      - .github/deploy-services.yaml
       - .github/workflows/deploy.yaml
+  # Deploys every service, e.g. to undo manual changes on the VMs.
   workflow_dispatch:
 
+# Deploys queue behind each other. A PR only plans and checks (tofu plan runs
+# with -lock=false), so it gets its own group and never holds up a deploy;
+# a new push to the PR replaces its running check.
 concurrency:
-  group: homelab
-  cancel-in-progress: false
+  group: ${{ github.event_name == 'pull_request' && format('homelab-pr-{0}', github.ref) || 'homelab' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  deploy:
-    name: Deploy VMs and services
+  changes:
+    name: Find changed services
+    runs-on: ubuntu-latest
+    outputs:
+      services: ${{ steps.services.outputs.services }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Match changed files
+        id: filter
+        if: github.event_name != 'workflow_dispatch'
+        uses: dorny/paths-filter@v3
+        with:
+          filters: .github/deploy-services.yaml
+
+      - name: List services
+        id: services
+        env:
+          CHANGES: ${{ steps.filter.outputs.changes }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            services=$(yq -o json -I 0 '[keys | .[] | select(. != "shared")]' .github/deploy-services.yaml)
+          else
+            services=$(jq -c 'map(select(. != "shared"))' <<< "${CHANGES:-[]}")
+          fi
+          echo "Services: $services"
+          echo "services=$services" >> "$GITHUB_OUTPUT"
+
+  tofu:
+    name: OpenTofu ${{ github.event_name == 'pull_request' && 'plan' || 'apply' }}
     runs-on: ubuntu-latest
 
     env:
@@ -32,6 +69,10 @@ jobs:
       TF_VAR_state_passphrase: ${{ secrets.TOFU_STATE_PASSPHRASE }}
       PROXMOX_VE_ENDPOINT: ${{ vars.PROXMOX_VE_ENDPOINT }}
       PROXMOX_VE_API_TOKEN: ${{ secrets.PROXMOX_VE_API_TOKEN }}
+
+    defaults:
+      run:
+        working-directory: ./proxmox
 
     steps:
       - name: Checkout repository
@@ -59,42 +100,94 @@ jobs:
           tofu_version: 1.13.0
           tofu_wrapper: false
 
-      - name: OpenTofu Plan VMs
-        if: github.event_name == 'pull_request'
-        working-directory: ./proxmox
-        run: |
-          tofu init
-          tofu plan -input=false -lock=false
+      - name: OpenTofu init
+        run: tofu init -input=false
 
-      - name: OpenTofu Apply VMs
+      - name: OpenTofu plan
+        if: github.event_name == 'pull_request'
+        run: tofu plan -input=false -lock=false
+
+      - name: OpenTofu apply
         if: github.event_name != 'pull_request'
-        working-directory: ./proxmox
+        run: tofu apply -input=false -auto-approve
+
+  # One job per service, so a failing service does not stop the others.
+  ansible:
+    name: Ansible ${{ matrix.service }}
+    needs: [changes, tofu]
+    if: needs.changes.outputs.services != '[]'
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJSON(needs.changes.outputs.services) }}
+
+    env:
+      SEAWEEDFS_ADMIN_ACCESS_KEY: ${{ secrets.SEAWEEDFS_ADMIN_ACCESS_KEY }}
+      SEAWEEDFS_ADMIN_SECRET_KEY: ${{ secrets.SEAWEEDFS_ADMIN_SECRET_KEY }}
+      K3S_TOKEN: ${{ secrets.K3S_TOKEN }}
+      K3S_CA_BUNDLE: ${{ secrets.K3S_CA_BUNDLE }}
+      TAILSCALE_ROUTER_OAUTH_SECRET: ${{ secrets.TAILSCALE_ROUTER_OAUTH_SECRET }}
+      OPENCLAW_ENV: ${{ secrets.OPENCLAW_ENV }}
+      OPENCLAW_SSH_PRIVATE_KEY: ${{ secrets.OPENCLAW_SSH_PRIVATE_KEY }}
+      MQTT_USERNAME: ${{ secrets.MQTT_USERNAME }}
+      MQTT_PASSWORD: ${{ secrets.MQTT_PASSWORD }}
+      ADGUARD_ADMIN_PASSWORD_HASH: ${{ secrets.ADGUARD_ADMIN_PASSWORD_HASH }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DNS_API_TOKEN }}
+      # Only print tasks that changed (or would change) something.
+      ANSIBLE_DISPLAY_OK_HOSTS: "false"
+      ANSIBLE_DISPLAY_SKIPPED_HOSTS: "false"
+      ANSIBLE_FORCE_COLOR: "true"
+
+    defaults:
+      run:
+        working-directory: ./ansible
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v4
+        with:
+          oauth-client-id: ${{ secrets.TAILSCALE_CI_HOMELAB_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TAILSCALE_CI_HOMELAB_OAUTH_SECRET }}
+          tags: tag:ci-homelab
+          version: latest
+
+      - name: Load SSH key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.HOMELAB_SSH_PRIVATE_KEY }}
         run: |
-          tofu init
-          tofu apply -input=false -auto-approve
+          eval "$(ssh-agent -s)"
+          ssh-add - <<< "$SSH_PRIVATE_KEY"
+          echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> "$GITHUB_ENV"
 
       - name: Install Ansible
-        if: github.event_name != 'pull_request'
         run: pipx install ansible-core
 
-      - name: Ansible configure VMs
-        if: github.event_name != 'pull_request'
-        working-directory: ./ansible
+      - name: Ansible ${{ github.event_name == 'pull_request' && 'check' || 'deploy' }}
         env:
-          SEAWEEDFS_ADMIN_ACCESS_KEY: ${{ secrets.SEAWEEDFS_ADMIN_ACCESS_KEY }}
-          SEAWEEDFS_ADMIN_SECRET_KEY: ${{ secrets.SEAWEEDFS_ADMIN_SECRET_KEY }}
-          K3S_TOKEN: ${{ secrets.K3S_TOKEN }}
-          K3S_CA_BUNDLE: ${{ secrets.K3S_CA_BUNDLE }}
-          TAILSCALE_ROUTER_OAUTH_SECRET: ${{ secrets.TAILSCALE_ROUTER_OAUTH_SECRET }}
-          OPENCLAW_ENV: ${{ secrets.OPENCLAW_ENV }}
-          OPENCLAW_SSH_PRIVATE_KEY: ${{ secrets.OPENCLAW_SSH_PRIVATE_KEY }}
-          MQTT_USERNAME: ${{ secrets.MQTT_USERNAME }}
-          MQTT_PASSWORD: ${{ secrets.MQTT_PASSWORD }}
-          ADGUARD_ADMIN_PASSWORD_HASH: ${{ secrets.ADGUARD_ADMIN_PASSWORD_HASH }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DNS_API_TOKEN }}
-        run: ansible-playbook playbook.yml
+          SERVICE: ${{ matrix.service }}
+          CHECK: ${{ github.event_name == 'pull_request' }}
+        run: |
+          case "$SERVICE" in
+            proxmox) inventory=proxmox-inventory.yml playbook=proxmox.yml limit=proxmox ;;
+            k3s) inventory=inventory.yml playbook=playbook.yml limit=k3s_server:k3s_agent ;;
+            *) inventory=inventory.yml playbook=playbook.yml limit=$SERVICE ;;
+          esac
 
-      - name: Ansible configure Proxmox nodes
-        if: github.event_name != 'pull_request'
-        working-directory: ./ansible
-        run: ansible-playbook -i proxmox-inventory.yml proxmox.yml
+          if [ "$CHECK" != true ]; then
+            ansible-playbook -i "$inventory" "$playbook" --limit "$limit" --diff
+            exit 0
+          fi
+
+          # A VM the PR adds does not exist yet: check the hosts that are up.
+          hosts=$(ansible "$limit" -i "$inventory" -m ansible.builtin.ping -o \
+            | awk '$3 == "SUCCESS" { print $1 }' | paste -sd, -) || true
+          if [ -z "$hosts" ]; then
+            echo "::notice::No $SERVICE host is up yet, nothing to check."
+            exit 0
+          fi
+          ansible-playbook -i "$inventory" "$playbook" --limit "$hosts" --check --diff

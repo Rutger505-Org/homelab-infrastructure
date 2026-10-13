@@ -55,6 +55,7 @@
   ansible.builtin.command: /usr/local/bin/k3s --version
   register: k3s_installed
   changed_when: false
+  check_mode: false
   failed_when: false
 
 - name: Download k3s install script

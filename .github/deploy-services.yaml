@@ -1,0 +1,49 @@
+# What each change deploys, read by dorny/paths-filter in workflows/deploy.yaml.
+# One key per inventory group in ansible/inventory.yml, except:
+# - k3s covers k3s_server and k3s_agent
+# - proxmox runs proxmox.yml on the nodes (proxmox-inventory.yml)
+# A change matching `shared` deploys every VM service.
+shared: &shared
+  - .github/workflows/deploy.yaml
+  - .github/deploy-services.yaml
+  - ansible/ansible.cfg
+  - ansible/inventory.yml
+  - ansible/playbook.yml
+  - ansible/roles/ssh_keys/**
+  - proxmox/**
+
+seaweedfs:
+  - *shared
+  - ansible/roles/seaweedfs/**
+
+k3s:
+  - *shared
+  - ansible/roles/k3s/**
+
+tailscale_router:
+  - *shared
+  - ansible/roles/tailscale_router/**
+
+openclaw_gateway:
+  - *shared
+  - ansible/roles/openclaw/**
+
+home_assistant:
+  - *shared
+  - ansible/roles/home_assistant/**
+
+adguard_home:
+  - *shared
+  - ansible/roles/adguard_home/**
+
+reverse_proxy:
+  - *shared
+  - ansible/roles/caddy/**
+
+proxmox:
+  - .github/workflows/deploy.yaml
+  - .github/deploy-services.yaml
+  - ansible/ansible.cfg
+  - ansible/proxmox.yml
+  - ansible/proxmox-inventory.yml
+  - ansible/roles/proxmox_*/**
