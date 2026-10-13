@@ -3,5 +3,10 @@
 k3s_version: v1.34.3+k3s1
 # Shared secret agents join the server with. Set on the play: server or agent.
 k3s_token: "{{ lookup('ansible.builtin.env', 'K3S_TOKEN') }}"
+# Base64 tar.gz of the cluster CAs (see the README). With it every rebuild of the
+# server signs with the same CAs, so existing kubeconfigs keep working. Without
+# it k3s generates new ones.
+k3s_ca_bundle: "{{ lookup('ansible.builtin.env', 'K3S_CA_BUNDLE') }}"
+k3s_tls_dir: /var/lib/rancher/k3s/server/tls
 k3s_server_address: "{{ hostvars[groups['k3s_server'][0]].ansible_host }}"
 k3s_service: "{{ 'k3s' if k3s_role == 'server' else 'k3s-agent' }}"

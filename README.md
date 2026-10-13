@@ -65,6 +65,7 @@ Secrets:
 - `TAILSCALE_CI_HOMELAB_OAUTH_CLIENT_ID`, `TAILSCALE_CI_HOMELAB_OAUTH_SECRET`: the `tag:ci-homelab` client
 - `SEAWEEDFS_ADMIN_ACCESS_KEY`, `SEAWEEDFS_ADMIN_SECRET_KEY`: S3 admin credentials
 - `K3S_TOKEN`: shared secret the k3s agents join with, e.g. `openssl rand -hex 32`
+- `K3S_CA_BUNDLE`: the cluster CAs, see k3s. Optional, but without it every rebuild needs new kubeconfigs
 - `TAILSCALE_ROUTER_OAUTH_SECRET`: OAuth client secret for the subnet router, see Tailscale router
 - `OPENCLAW_ENV`: contents of `~/.openclaw/.env` on the OpenClaw VM
 - `OPENCLAW_SSH_PRIVATE_KEY`: SSH key of the OpenClaw VM, with access to `Rutger505/dev-env` and `Rutger505/openclaw-config`
@@ -206,8 +207,21 @@ defaults, bump to upgrade), with ServiceLB disabled for MetalLB. Workloads come 
 kubernetes-infrastructure; PVCs (`local-path`) live on the root disk, so a rebuild
 loses them.
 
-Kubeconfig: `sudo cat /etc/rancher/k3s/k3s.yaml` on k3s-1, with `127.0.0.1` replaced by
-`192.168.178.211`.
+The cluster CAs come from `K3S_CA_BUNDLE` and are put in place before k3s first starts,
+so a rebuilt server signs with the same CAs: existing admin kubeconfigs keep working,
+only pointed at `https://192.168.178.211:6443`. Service account tokens do not survive a
+rebuild, they belong to objects in the old cluster; kubernetes-infrastructure recreates them.
+The secret holds the CA private keys, which give full admin access to the cluster.
+
+Export the CAs from a running server (here the hand-built K3s-1):
+
+```bash
+ssh k3s@192.168.178.201 'sudo sh -c "cd /var/lib/rancher/k3s/server/tls && tar -czf - *-ca.crt *-ca.key service*.key \$(ls -d etcd/*-ca.* 2>/dev/null)"' \
+  | base64 -w0 | gh secret set K3S_CA_BUNDLE -R Rutger505-Org/homelab-infrastructure
+```
+
+Without the secret k3s generates new CAs; get the kubeconfig with
+`sudo cat /etc/rancher/k3s/k3s.yaml` on k3s-1, `127.0.0.1` replaced by `192.168.178.211`.
 
 ### Tailscale router
 
@@ -247,7 +261,7 @@ The new VMs run next to the old ones, with their own ids and addresses. Per VM:
 1. k3s: back up the PVCs, point the `KUBECONFIG` secret of the GitHub org and the
    `4-rbac` API address (`.201`) in kubernetes-infrastructure and the `tag:ci` grant
    (and its test) in the tailnet policy at `.211`, rerun its
-   deploys, restore the data
+   deploys, restore the data, regenerate service account kubeconfigs
 2. Tailscale: check the new router shows the route as approved, then shut the old one down
 3. OpenClaw: stop the old Gateway, copy `~/.openclaw` over, set
    `openclaw_gateway_enabled: true`, update the monitoring target (`.206:18789`) and the

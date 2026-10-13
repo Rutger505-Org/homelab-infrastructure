@@ -84,6 +84,7 @@ jobs:
           SEAWEEDFS_ADMIN_ACCESS_KEY: ${{ secrets.SEAWEEDFS_ADMIN_ACCESS_KEY }}
           SEAWEEDFS_ADMIN_SECRET_KEY: ${{ secrets.SEAWEEDFS_ADMIN_SECRET_KEY }}
           K3S_TOKEN: ${{ secrets.K3S_TOKEN }}
+          K3S_CA_BUNDLE: ${{ secrets.K3S_CA_BUNDLE }}
           TAILSCALE_ROUTER_OAUTH_SECRET: ${{ secrets.TAILSCALE_ROUTER_OAUTH_SECRET }}
           OPENCLAW_ENV: ${{ secrets.OPENCLAW_ENV }}
           OPENCLAW_SSH_PRIVATE_KEY: ${{ secrets.OPENCLAW_SSH_PRIVATE_KEY }}
