@@ -9,7 +9,7 @@
 # sums below may go over as long as the VMs do not all use their maximum at
 # once. Hand-built VMs (proxmox/manual-vms.tf) count too until they are removed.
 # - proxmox-lade: 13.5 GB here, plus 12.5 GB hand-built
-# - proxmox-prodesk: 8.5 GB here, plus 6 GB hand-built
+# - proxmox-prodesk: 6.5 GB here, plus 6 GB hand-built
 all:
   vars:
     ansible_user: debian
@@ -51,7 +51,8 @@ all:
           vm_id: 912
           proxmox_node: proxmox-prodesk
           cores: 4
-          memory: 6144
+          # Less than k3s-1: prodesk only has 8 GB.
+          memory: 4096
           disk_size: 20
           data_disk_size: 0
     tailscale_router:
