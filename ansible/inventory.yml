@@ -80,6 +80,10 @@ all:
           proxmox_node: proxmox-lade
           os: arch
           ansible_user: openclaw
+          # The hand-built OpenClaw VM's key, so it can move its own state
+          # here at cutover. Remove once the old VM is gone.
+          ssh_extra_authorized_keys:
+            - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK5DCkjLrATKWR+HrrelHjHsNXw9y8i4wdnoNsmHqlNn openclaw@openclaw
           cores: 4
           memory: 6144
           disk_size: 65
