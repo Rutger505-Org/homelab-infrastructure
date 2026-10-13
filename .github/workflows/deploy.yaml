@@ -91,6 +91,7 @@ jobs:
           MQTT_USERNAME: ${{ secrets.MQTT_USERNAME }}
           MQTT_PASSWORD: ${{ secrets.MQTT_PASSWORD }}
           ADGUARD_ADMIN_PASSWORD_HASH: ${{ secrets.ADGUARD_ADMIN_PASSWORD_HASH }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DNS_API_TOKEN }}
         run: ansible-playbook playbook.yml
 
       - name: Ansible configure Proxmox nodes

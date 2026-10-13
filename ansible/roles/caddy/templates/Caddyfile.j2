@@ -1,0 +1,35 @@
+*.{{ caddy_domain }} {
+	# DNS-01, so nothing has to be reachable from the internet. Public resolvers
+	# for the propagation check, since the LAN DNS rewrites this domain.
+	tls {
+		dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+		resolvers 1.1.1.1 9.9.9.9
+	}
+
+{% for name, route in caddy_routes.items() %}
+	@{{ name }} host {{ name }}.{{ caddy_domain }}
+	handle @{{ name }} {
+{% if route.insecure_tls | default(false) or route.upstream_host is defined %}
+		reverse_proxy {{ route.upstream }} {
+{% if route.upstream_host is defined %}
+			header_up Host {{ route.upstream_host }}
+{% endif %}
+			transport http {
+{% if route.insecure_tls | default(false) %}
+				tls_insecure_skip_verify
+{% endif %}
+{% if route.upstream_host is defined %}
+				tls_server_name {{ route.upstream_host }}
+{% endif %}
+			}
+		}
+{% else %}
+		reverse_proxy {{ route.upstream }}
+{% endif %}
+	}
+
+{% endfor %}
+	handle {
+		respond "Unknown service" 404
+	}
+}

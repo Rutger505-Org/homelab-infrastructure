@@ -1,0 +1,96 @@
+- name: Check Cloudflare API token
+  ansible.builtin.assert:
+    that:
+      - caddy_cloudflare_api_token | length > 0
+    fail_msg: Set CLOUDFLARE_API_TOKEN.
+    quiet: true
+  no_log: true
+
+- name: Install nftables
+  ansible.builtin.apt:
+    name: nftables
+
+- name: Write firewall rules
+  ansible.builtin.template:
+    src: nftables.conf.j2
+    dest: /etc/nftables.conf
+    mode: "0644"
+  notify: Reload nftables
+
+- name: Load firewall rules on boot
+  ansible.builtin.systemd_service:
+    name: nftables
+    enabled: true
+
+- name: Create caddy user
+  ansible.builtin.user:
+    name: caddy
+    system: true
+    shell: /usr/sbin/nologin
+    home: "{{ caddy_data_dir }}"
+    create_home: false
+
+- name: Create directories
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner }}"
+    group: caddy
+    mode: "{{ item.mode }}"
+  loop:
+    - { path: "/opt/caddy/{{ caddy_version }}", owner: root, mode: "0755" }
+    - { path: /etc/caddy, owner: root, mode: "0750" }
+    - { path: "{{ caddy_data_dir }}", owner: caddy, mode: "0750" }
+
+# One directory per version, so bumping caddy_version installs and switches to
+# the new binary and the old one stays around for a rollback.
+- name: Download Caddy
+  ansible.builtin.get_url:
+    url: "{{ caddy_download_url }}"
+    dest: /opt/caddy/{{ caddy_version }}/caddy
+    mode: "0755"
+    timeout: 600
+  register: caddy_download
+  retries: 3
+  delay: 10
+  until: caddy_download is succeeded
+
+- name: Link caddy binary
+  ansible.builtin.file:
+    src: /opt/caddy/{{ caddy_version }}/caddy
+    dest: /usr/local/bin/caddy
+    state: link
+  notify: Restart caddy
+
+- name: Write Cloudflare token
+  ansible.builtin.copy:
+    dest: /etc/caddy/caddy.env
+    content: "CLOUDFLARE_API_TOKEN={{ caddy_cloudflare_api_token }}\n"
+    owner: root
+    group: caddy
+    mode: "0640"
+  notify: Restart caddy
+  no_log: true
+
+- name: Write Caddyfile
+  ansible.builtin.template:
+    src: Caddyfile.j2
+    dest: /etc/caddy/Caddyfile
+    owner: root
+    group: caddy
+    mode: "0640"
+  notify: Reload caddy
+
+- name: Write systemd unit
+  ansible.builtin.template:
+    src: caddy.service.j2
+    dest: /etc/systemd/system/caddy.service
+    mode: "0644"
+  notify: Restart caddy
+
+- name: Enable caddy
+  ansible.builtin.systemd_service:
+    name: caddy
+    enabled: true
+    state: started
+    daemon_reload: true

@@ -1,0 +1,17 @@
+# Not a service restart: nftables.service flushes the whole ruleset on stop.
+- name: Reload nftables
+  ansible.builtin.command: nft -f /etc/nftables.conf
+  changed_when: true
+
+- name: Restart caddy
+  ansible.builtin.systemd_service:
+    name: caddy
+    state: restarted
+    daemon_reload: true
+
+# A reload keeps the certificates and connections; a bad Caddyfile fails here
+# and the old config keeps running.
+- name: Reload caddy
+  ansible.builtin.systemd_service:
+    name: caddy
+    state: reloaded

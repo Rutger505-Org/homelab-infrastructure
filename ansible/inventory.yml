@@ -100,3 +100,13 @@ all:
           memory: 512
           disk_size: 8
           data_disk_size: 0
+    reverse_proxy:
+      hosts:
+        reverse-proxy:
+          ansible_host: 192.168.178.207
+          vm_id: 907
+          proxmox_node: proxmox-prodesk
+          cores: 1
+          memory: 512
+          disk_size: 8
+          data_disk_size: 0

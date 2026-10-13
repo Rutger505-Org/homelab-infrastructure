@@ -1,0 +1,30 @@
+# Caddy with the Cloudflare DNS module, built by caddyserver.com's download
+# service. Building takes a few minutes, hence the long download timeout.
+caddy_version: "v2.11.7"
+caddy_download_url: "https://caddyserver.com/api/download?os=linux&arch=amd64&p=github.com%2Fcaddy-dns%2Fcloudflare&version={{ caddy_version }}"
+caddy_data_dir: /var/lib/caddy
+caddy_domain: homelab.rutgerpronk.com
+# Zone:DNS:Edit on rutgerpronk.com, for the DNS-01 challenge of the wildcard certificate.
+caddy_cloudflare_api_token: "{{ lookup('ansible.builtin.env', 'CLOUDFLARE_API_TOKEN') }}"
+
+# <name>.homelab.rutgerpronk.com => upstream.
+#   upstream:      URL Caddy proxies to
+#   insecure_tls:  skip certificate checks for an https upstream with a self-signed certificate
+#   upstream_host: Host header and TLS server name to send, for name-based upstreams like Traefik
+caddy_routes:
+  adguard:
+    upstream: http://192.168.178.205:80
+  openclaw:
+    upstream: http://192.168.178.206:18789
+  proxmox-lade:
+    upstream: https://192.168.178.200:8006
+    insecure_tls: true
+  proxmox-prodesk:
+    upstream: https://192.168.178.199:8006
+    insecure_tls: true
+  home-assistant:
+    upstream: http://192.168.178.215:8123
+  # Traefik in k3s, until Grafana gets its own internal route there.
+  grafana:
+    upstream: https://192.168.178.230
+    upstream_host: grafana.rutgerpronk.com
