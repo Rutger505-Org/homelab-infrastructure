@@ -83,4 +83,6 @@ jobs:
         env:
           SEAWEEDFS_ADMIN_ACCESS_KEY: ${{ secrets.SEAWEEDFS_ADMIN_ACCESS_KEY }}
           SEAWEEDFS_ADMIN_SECRET_KEY: ${{ secrets.SEAWEEDFS_ADMIN_SECRET_KEY }}
+          MQTT_USERNAME: ${{ secrets.MQTT_USERNAME }}
+          MQTT_PASSWORD: ${{ secrets.MQTT_PASSWORD }}
         run: ansible-playbook playbook.yml

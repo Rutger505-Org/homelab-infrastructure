@@ -1,0 +1,39 @@
+# Managed by Ansible (homelab-infrastructure, role home_assistant).
+name: home-assistant
+
+services:
+  home-assistant:
+    image: ghcr.io/home-assistant/home-assistant:{{ home_assistant_version }}
+    restart: unless-stopped
+    # Host networking, so discovery (mDNS, SSDP) works.
+    network_mode: host
+    environment:
+      TZ: {{ home_assistant_timezone }}
+    volumes:
+      - {{ home_assistant_data_dir }}/config:/config
+      - /etc/localtime:/etc/localtime:ro
+      - /run/dbus:/run/dbus:ro
+    depends_on:
+      - mosquitto
+
+  mosquitto:
+    image: eclipse-mosquitto:{{ home_assistant_mosquitto_version }}
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+    env_file: mqtt.env
+    # Hashes the password into a file mosquitto reads, then starts the broker.
+    command:
+      - sh
+      - -c
+      - >-
+        mosquitto_passwd -b -c /mosquitto/passwd "$$MQTT_USERNAME" "$$MQTT_PASSWORD" &&
+        chown mosquitto:mosquitto /mosquitto/passwd && chmod 0600 /mosquitto/passwd &&
+        exec /usr/sbin/mosquitto -c /mosquitto/config/mosquitto.conf
+    volumes:
+      - {{ home_assistant_data_dir }}/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - {{ home_assistant_data_dir }}/mosquitto/data:/mosquitto/data
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 1883"]
+      interval: 10s
+      retries: 6

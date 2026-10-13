@@ -19,7 +19,7 @@ Debian 13 cloud image, with cloud-init only setting up the `debian` user, SSH ke
 and the QEMU guest agent. `ansible/` then configures what runs on it. CI runs both
 on every push to main that touches them.
 
-Only the SeaweedFS VM is managed this way. The Tailscale and k3s VMs are still
+Only the SeaweedFS and Home Assistant VMs are managed this way. The Tailscale and k3s VMs are still
 built by hand, see the sections below.
 
 The hand-built VMs (K3s-1, K3s-2, Tailscale, OpenClaw) are imported into the same
@@ -62,6 +62,7 @@ Secrets:
 - `HOMELAB_SSH_PRIVATE_KEY`: the CI private key
 - `TAILSCALE_CI_HOMELAB_OAUTH_CLIENT_ID`, `TAILSCALE_CI_HOMELAB_OAUTH_SECRET`: the `tag:ci-homelab` client
 - `SEAWEEDFS_ADMIN_ACCESS_KEY`, `SEAWEEDFS_ADMIN_SECRET_KEY`: S3 admin credentials
+- `MQTT_USERNAME`, `MQTT_PASSWORD`: Mosquitto login on the Home Assistant VM
 
 Variables:
 - `R2_ENDPOINT`: `https://<account-id>.r2.cloudflarestorage.com`
@@ -81,6 +82,8 @@ export PROXMOX_VE_ENDPOINT=https://192.168.178.200:8006/
 export PROXMOX_VE_API_TOKEN='terraform@pve!opentofu=<secret>'
 export SEAWEEDFS_ADMIN_ACCESS_KEY=<access key>
 export SEAWEEDFS_ADMIN_SECRET_KEY=<secret key>
+export MQTT_USERNAME=<mqtt user>
+export MQTT_PASSWORD=<mqtt password>
 
 tofu -chdir=proxmox init
 tofu -chdir=proxmox apply
@@ -117,6 +120,29 @@ the rest listens on localhost and nftables drops everything else.
 - Buckets: `seaweedfs_buckets` in the role defaults, objects anonymously readable per file
 - Upgrade: bump `seaweedfs_version`
 - Not in use yet: the CDN still points at SeaweedFS in k3s until it is moved over
+
+### Home Assistant
+
+`home-assistant` (`.215`, id 905, on `proxmox-prodesk`) runs Home Assistant and a
+Mosquitto broker as Docker Compose services (`/etc/home-assistant/compose.yaml`). Built for
+[motorized-blinds](https://github.com/Rutger505/motorized-blinds): the drivers built with the
+`mqtt` feature announce themselves through MQTT discovery and show up as covers.
+
+- Web UI: `http://192.168.178.215:8123`, LAN only. Onboarding creates the owner account
+- MQTT: `192.168.178.215:1883`, anonymous off, one user from `MQTT_USERNAME`/`MQTT_PASSWORD`.
+  In Home Assistant add the MQTT integration with broker `localhost`
+- Home Assistant uses host networking so mDNS/SSDP discovery works; nftables allows
+  SSH, 8123, 1883 and mDNS/SSDP only
+- Data: `/srv/home-assistant` on its own 10 GB disk (scsi1): `config/` and `mosquitto/data`
+- Upgrade: bump `home_assistant_version` / `home_assistant_mosquitto_version` in the role defaults
+
+Flash a blind driver against it, from `motorized-blinds/driver`:
+
+```sh
+BLIND_ID=1 WIFI_SSID=... WIFI_PASSWORD=... MQTT_BROKER=192.168.178.215 \
+  MQTT_USERNAME=... MQTT_PASSWORD=... \
+  cargo run --release --no-default-features --features mqtt
+```
 
 ### Known limits
 
