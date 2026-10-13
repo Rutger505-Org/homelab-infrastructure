@@ -83,6 +83,12 @@
       - docker-compose-plugin
     update_cache: true
 
+- name: Create Docker drop-in directory
+  ansible.builtin.file:
+    path: /etc/systemd/system/docker.service.d
+    state: directory
+    mode: "0755"
+
 # Never let the containers start on the empty mount point of the root disk.
 - name: Make Docker wait for the data disk
   ansible.builtin.copy:
