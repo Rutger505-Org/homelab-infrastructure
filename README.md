@@ -144,7 +144,6 @@ changes on a VM.
   commands (`blkid`, `k3s --version` and so on) need `check_mode: false`;
   otherwise check mode skips them and the tasks after them report changes that
   will not happen.
-- Logs only show tasks that changed something.
 - Deploys queue behind each other. PR runs use their own concurrency group, so they
   never hold up a deploy, and a new push cancels the PR's running check.
 
