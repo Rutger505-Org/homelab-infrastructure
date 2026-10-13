@@ -21,3 +21,9 @@
   become: true
   roles:
     - seaweedfs
+
+- name: Install Home Assistant
+  hosts: home_assistant
+  become: true
+  roles:
+    - home_assistant

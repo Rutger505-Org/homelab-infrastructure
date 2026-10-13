@@ -1,0 +1,8 @@
+listener 1883
+allow_anonymous false
+# Written from MQTT_USERNAME/MQTT_PASSWORD by the container command at start.
+password_file /mosquitto/passwd
+# Discovery configs and blind states are retained; keep them across restarts.
+persistence true
+persistence_location /mosquitto/data/
+log_dest stdout

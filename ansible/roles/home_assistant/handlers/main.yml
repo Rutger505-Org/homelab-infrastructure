@@ -1,0 +1,13 @@
+# Not a service restart: nftables.service flushes the whole ruleset on stop.
+- name: Reload nftables
+  ansible.builtin.command: nft -f /etc/nftables.conf
+  changed_when: true
+
+- name: Reload systemd
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+
+# mosquitto.conf is a bind mount; compose does not notice it changing.
+- name: Restart mosquitto
+  ansible.builtin.command: docker compose --project-directory {{ home_assistant_compose_dir }} restart mosquitto
+  changed_when: true

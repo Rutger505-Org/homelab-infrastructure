@@ -24,3 +24,13 @@ all:
           memory: 1024
           disk_size: 10
           data_disk_size: 60
+    home_assistant:
+      hosts:
+        home-assistant:
+          ansible_host: 192.168.178.215
+          vm_id: 905
+          proxmox_node: proxmox-prodesk
+          cores: 2
+          memory: 2048
+          disk_size: 16
+          data_disk_size: 10
