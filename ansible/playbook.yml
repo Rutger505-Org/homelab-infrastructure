@@ -49,3 +49,15 @@
   hosts: openclaw_gateway
   roles:
     - openclaw
+
+- name: Install Home Assistant
+  hosts: home_assistant
+  become: true
+  roles:
+    - home_assistant
+
+- name: Install AdGuard Home
+  hosts: adguard_home
+  become: true
+  roles:
+    - adguard_home

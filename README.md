@@ -20,9 +20,9 @@ cloud-init only setting up the login user, SSH keys and the QEMU guest agent.
 `ansible/` then configures what runs on it. CI runs both on every push to main
 that touches them.
 
-Managed this way: SeaweedFS, and the replacements for the hand-built VMs (k3s-1,
-k3s-2, tailscale, openclaw). Until those are cut over (see below), the hand-built
-originals keep running.
+Managed this way: SeaweedFS, Home Assistant, AdGuard Home, and the replacements for
+the hand-built VMs (k3s-1, k3s-2, tailscale, openclaw). Until those are cut over (see
+below), the hand-built originals keep running.
 
 The hand-built VMs (K3s-1, K3s-2, Tailscale, OpenClaw) are imported into the same
 state by `proxmox/manual-vms.tf`, mirroring their live config. OpenTofu tracks them
@@ -68,6 +68,8 @@ Secrets:
 - `TAILSCALE_ROUTER_OAUTH_SECRET`: OAuth client secret for the subnet router, see Tailscale router
 - `OPENCLAW_ENV`: contents of `~/.openclaw/.env` on the OpenClaw VM
 - `OPENCLAW_SSH_PRIVATE_KEY`: SSH key of the OpenClaw VM, with access to `Rutger505/dev-env` and `Rutger505/openclaw-config`
+- `MQTT_USERNAME`, `MQTT_PASSWORD`: Mosquitto login on the Home Assistant VM
+- `ADGUARD_ADMIN_PASSWORD_HASH`: bcrypt hash of the AdGuard Home web UI password
 
 Variables:
 - `R2_ENDPOINT`: `https://<account-id>.r2.cloudflarestorage.com`
@@ -89,6 +91,9 @@ export SEAWEEDFS_ADMIN_ACCESS_KEY=<access key>
 export SEAWEEDFS_ADMIN_SECRET_KEY=<secret key>
 export K3S_TOKEN=<token> TAILSCALE_ROUTER_OAUTH_SECRET=<secret>
 export OPENCLAW_ENV="$(cat .env)" OPENCLAW_SSH_PRIVATE_KEY="$(cat id_ed25519)"
+export MQTT_USERNAME=<mqtt user>
+export MQTT_PASSWORD=<mqtt password>
+export ADGUARD_ADMIN_PASSWORD_HASH='<bcrypt hash>'
 
 tofu -chdir=proxmox init
 tofu -chdir=proxmox apply
@@ -129,6 +134,48 @@ the rest listens on localhost and nftables drops everything else.
 - Buckets: `seaweedfs_buckets` in the role defaults, objects anonymously readable per file
 - Upgrade: bump `seaweedfs_version`
 - Not in use yet: the CDN still points at SeaweedFS in k3s until it is moved over
+
+### Home Assistant
+
+`home-assistant` (`.215`, id 905, on `proxmox-prodesk`) runs Home Assistant and a
+Mosquitto broker as Docker Compose services (`/etc/home-assistant/compose.yaml`). Built for
+[motorized-blinds](https://github.com/Rutger505/motorized-blinds): the drivers built with the
+`mqtt` feature announce themselves through MQTT discovery and show up as covers.
+
+- Web UI: `http://192.168.178.215:8123`, LAN only. Onboarding creates the owner account
+- MQTT: `192.168.178.215:1883`, anonymous off, one user from `MQTT_USERNAME`/`MQTT_PASSWORD`.
+  In Home Assistant add the MQTT integration with broker `localhost`
+- Home Assistant uses host networking so mDNS/SSDP discovery works; nftables allows
+  SSH, 8123, 1883 and mDNS/SSDP only
+- Data: `/srv/home-assistant` on its own 10 GB disk (scsi1): `config/` and `mosquitto/data`
+- Upgrade: bump `home_assistant_version` / `home_assistant_mosquitto_version` in the role defaults
+
+Flash a blind driver against it, from `motorized-blinds/driver`:
+
+```sh
+BLIND_ID=1 WIFI_SSID=... WIFI_PASSWORD=... MQTT_BROKER=192.168.178.215 \
+  MQTT_USERNAME=... MQTT_PASSWORD=... \
+  cargo run --release --no-default-features --features mqtt
+```
+
+### AdGuard Home
+
+`adguard-home` (`.205`, id 906, on `proxmox-prodesk`) runs AdGuard Home as the LAN DNS
+resolver with ad blocking. Only SSH, DNS (53 TCP/UDP) and the web UI on port 80 are
+reachable; nftables drops everything else.
+
+- Web UI: http://192.168.178.205, user `admin`, password in Bitwarden
+- Config: Ansible seeds `/var/lib/adguardhome/AdGuardHome.yaml` once (upstreams, admin
+  user, ports). AdGuard Home owns that file afterwards, so change settings, blocklists
+  and rewrites in the web UI. A rebuilt VM starts again from the seed.
+- Password: the seed only takes a bcrypt hash, e.g. `htpasswd -nbBC 10 "" <password> | tr -d ':\n'`.
+  Changing the secret does not change the password of a running instance.
+- Upgrade: bump `adguard_home_version`; the built-in updater is off
+- Clients only use it once the Ziggo modem hands it out as DNS server: set
+  `192.168.178.205` by hand in the modem's DHCP/LAN settings. AdGuard Home does not run
+  DHCP, the modem stays the only DHCP server. If the modem has no DNS field, set it per device
+- Single instance: when the VM is down, LAN clients lose DNS. Set the modem's DNS back to
+  automatic to fall back
 
 ### Known limits
 

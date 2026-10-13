@@ -87,4 +87,7 @@ jobs:
           TAILSCALE_ROUTER_OAUTH_SECRET: ${{ secrets.TAILSCALE_ROUTER_OAUTH_SECRET }}
           OPENCLAW_ENV: ${{ secrets.OPENCLAW_ENV }}
           OPENCLAW_SSH_PRIVATE_KEY: ${{ secrets.OPENCLAW_SSH_PRIVATE_KEY }}
+          MQTT_USERNAME: ${{ secrets.MQTT_USERNAME }}
+          MQTT_PASSWORD: ${{ secrets.MQTT_PASSWORD }}
+          ADGUARD_ADMIN_PASSWORD_HASH: ${{ secrets.ADGUARD_ADMIN_PASSWORD_HASH }}
         run: ansible-playbook playbook.yml

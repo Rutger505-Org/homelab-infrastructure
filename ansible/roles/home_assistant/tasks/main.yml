@@ -1,0 +1,151 @@
+- name: Check MQTT credentials
+  ansible.builtin.assert:
+    that:
+      - home_assistant_mqtt_username | length > 0
+      - home_assistant_mqtt_password | length > 0
+    fail_msg: Set MQTT_USERNAME and MQTT_PASSWORD.
+    quiet: true
+  no_log: true
+
+- name: Install nftables
+  ansible.builtin.apt:
+    name: nftables
+
+- name: Write firewall rules
+  ansible.builtin.template:
+    src: nftables.conf.j2
+    dest: /etc/nftables.conf
+    mode: "0644"
+  notify: Reload nftables
+
+- name: Load firewall rules on boot
+  ansible.builtin.systemd_service:
+    name: nftables
+    enabled: true
+
+- name: Read data disk filesystem
+  ansible.builtin.command: blkid -o value -s TYPE {{ home_assistant_data_device }}
+  register: home_assistant_data_fs
+  changed_when: false
+  failed_when: home_assistant_data_fs.rc not in [0, 2]
+
+# Only ever formats an empty disk; blkid exits 2 when it finds no filesystem.
+- name: Format data disk
+  ansible.builtin.command: mkfs.ext4 -L ha-data {{ home_assistant_data_device }}
+  when: home_assistant_data_fs.rc == 2
+  changed_when: true
+
+- name: Create data mount point
+  ansible.builtin.file:
+    path: "{{ home_assistant_data_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Add data disk to fstab
+  ansible.builtin.lineinfile:
+    path: /etc/fstab
+    regexp: "^\\S+\\s+{{ home_assistant_data_dir }}\\s"
+    line: "LABEL=ha-data {{ home_assistant_data_dir }} ext4 defaults,nofail 0 2"
+
+- name: Check data disk mount
+  ansible.builtin.command: findmnt --mountpoint {{ home_assistant_data_dir }}
+  register: home_assistant_data_mount
+  changed_when: false
+  failed_when: false
+
+# ansible.posix.mount is not in ansible-core, which is all CI installs.
+- name: Mount data disk  # noqa: command-instead-of-module
+  ansible.builtin.command: mount {{ home_assistant_data_dir }}
+  when: home_assistant_data_mount.rc != 0
+  changed_when: true
+
+- name: Install deb822_repository dependency
+  ansible.builtin.apt:
+    name: python3-debian
+
+# Docker's own repository: Debian's docker.io lags behind and ships compose
+# separately.
+- name: Add Docker repository
+  ansible.builtin.deb822_repository:
+    name: docker
+    types: deb
+    uris: https://download.docker.com/linux/debian
+    suites: "{{ ansible_facts['distribution_release'] }}"
+    components: stable
+    signed_by: https://download.docker.com/linux/debian/gpg
+
+- name: Install Docker
+  ansible.builtin.apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-compose-plugin
+    update_cache: true
+
+- name: Create Docker drop-in directory
+  ansible.builtin.file:
+    path: /etc/systemd/system/docker.service.d
+    state: directory
+    mode: "0755"
+
+# Never let the containers start on the empty mount point of the root disk.
+- name: Make Docker wait for the data disk
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/docker.service.d/home-assistant.conf
+    content: |
+      [Unit]
+      RequiresMountsFor={{ home_assistant_data_dir }}
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Enable Docker
+  ansible.builtin.systemd_service:
+    name: docker
+    enabled: true
+    state: started
+
+- name: Create directories
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner }}"
+    group: "{{ item.owner }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - { path: "{{ home_assistant_compose_dir }}", owner: root, mode: "0750" }
+    - { path: "{{ home_assistant_data_dir }}/config", owner: root, mode: "0755" }
+    - { path: "{{ home_assistant_data_dir }}/mosquitto", owner: root, mode: "0755" }
+    # uid of the mosquitto user inside the image
+    - { path: "{{ home_assistant_data_dir }}/mosquitto/data", owner: "1883", mode: "0750" }
+
+- name: Write mosquitto config
+  ansible.builtin.template:
+    src: mosquitto.conf.j2
+    dest: "{{ home_assistant_data_dir }}/mosquitto/mosquitto.conf"
+    mode: "0644"
+  notify: Restart mosquitto
+
+- name: Write MQTT credentials
+  ansible.builtin.copy:
+    dest: "{{ home_assistant_compose_dir }}/mqtt.env"
+    content: |
+      MQTT_USERNAME={{ home_assistant_mqtt_username }}
+      MQTT_PASSWORD={{ home_assistant_mqtt_password }}
+    mode: "0600"
+  no_log: true
+
+- name: Write compose file
+  ansible.builtin.template:
+    src: compose.yaml.j2
+    dest: "{{ home_assistant_compose_dir }}/compose.yaml"
+    mode: "0644"
+
+- name: Apply config changes before starting
+  ansible.builtin.meta: flush_handlers
+
+# Recreates a container whenever its compose definition or env file changed.
+- name: Start containers
+  ansible.builtin.command: docker compose --project-directory {{ home_assistant_compose_dir }} up --detach --remove-orphans --wait
+  register: home_assistant_up
+  changed_when: home_assistant_up.stderr is search('Creat|Recreat|Pull')

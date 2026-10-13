@@ -72,3 +72,23 @@ all:
           # Off until the state is moved over from the old VM: two Gateways
           # with the same channel credentials would both answer.
           openclaw_gateway_enabled: false
+    home_assistant:
+      hosts:
+        home-assistant:
+          ansible_host: 192.168.178.215
+          vm_id: 905
+          proxmox_node: proxmox-prodesk
+          cores: 2
+          memory: 2048
+          disk_size: 16
+          data_disk_size: 10
+    adguard_home:
+      hosts:
+        adguard-home:
+          ansible_host: 192.168.178.205
+          vm_id: 906
+          proxmox_node: proxmox-prodesk
+          cores: 1
+          memory: 512
+          disk_size: 8
+          data_disk_size: 0

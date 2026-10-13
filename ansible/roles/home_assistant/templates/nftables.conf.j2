@@ -1,0 +1,23 @@
+#!/usr/sbin/nft -f
+# Only this table is replaced, never the whole ruleset.
+table inet host_firewall
+delete table inet host_firewall
+
+table inet host_firewall {
+  chain input {
+    type filter hook input priority filter; policy drop;
+
+    ct state established,related accept
+    ct state invalid drop
+    iif "lo" accept
+    meta l4proto { icmp, ipv6-icmp } accept
+
+    tcp dport 22 accept
+    # Home Assistant web UI
+    tcp dport 8123 accept
+    # Mosquitto, published by Docker (also passes the forward hook)
+    tcp dport 1883 accept
+    # mDNS and SSDP, so Home Assistant can discover devices on the LAN
+    udp dport { 5353, 1900 } accept
+  }
+}
