@@ -31,6 +31,10 @@ resource "proxmox_download_file" "arch" {
   url          = var.arch_image_url
   file_name    = "arch-linux-x86_64-cloudimg.qcow2"
   overwrite    = false
+  # The pkgbuild.com mirror is slow; the 10 minute default timed out. Proxmox
+  # keeps downloading after a timeout, so take over a file it finished.
+  upload_timeout      = 3600
+  overwrite_unmanaged = true
 }
 
 module "vm" {
