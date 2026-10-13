@@ -27,3 +27,9 @@
   become: true
   roles:
     - home_assistant
+
+- name: Install AdGuard Home
+  hosts: adguard_home
+  become: true
+  roles:
+    - adguard_home

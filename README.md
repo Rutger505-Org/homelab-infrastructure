@@ -19,7 +19,7 @@ Debian 13 cloud image, with cloud-init only setting up the `debian` user, SSH ke
 and the QEMU guest agent. `ansible/` then configures what runs on it. CI runs both
 on every push to main that touches them.
 
-Only the SeaweedFS and Home Assistant VMs are managed this way. The Tailscale and k3s VMs are still
+Only the SeaweedFS, Home Assistant and AdGuard Home VMs are managed this way. The Tailscale and k3s VMs are still
 built by hand, see the sections below.
 
 The hand-built VMs (K3s-1, K3s-2, Tailscale, OpenClaw) are imported into the same
@@ -63,6 +63,7 @@ Secrets:
 - `TAILSCALE_CI_HOMELAB_OAUTH_CLIENT_ID`, `TAILSCALE_CI_HOMELAB_OAUTH_SECRET`: the `tag:ci-homelab` client
 - `SEAWEEDFS_ADMIN_ACCESS_KEY`, `SEAWEEDFS_ADMIN_SECRET_KEY`: S3 admin credentials
 - `MQTT_USERNAME`, `MQTT_PASSWORD`: Mosquitto login on the Home Assistant VM
+- `ADGUARD_ADMIN_PASSWORD_HASH`: bcrypt hash of the AdGuard Home web UI password
 
 Variables:
 - `R2_ENDPOINT`: `https://<account-id>.r2.cloudflarestorage.com`
@@ -84,6 +85,7 @@ export SEAWEEDFS_ADMIN_ACCESS_KEY=<access key>
 export SEAWEEDFS_ADMIN_SECRET_KEY=<secret key>
 export MQTT_USERNAME=<mqtt user>
 export MQTT_PASSWORD=<mqtt password>
+export ADGUARD_ADMIN_PASSWORD_HASH='<bcrypt hash>'
 
 tofu -chdir=proxmox init
 tofu -chdir=proxmox apply
@@ -143,6 +145,25 @@ BLIND_ID=1 WIFI_SSID=... WIFI_PASSWORD=... MQTT_BROKER=192.168.178.215 \
   MQTT_USERNAME=... MQTT_PASSWORD=... \
   cargo run --release --no-default-features --features mqtt
 ```
+
+### AdGuard Home
+
+`adguard-home` (`.205`, id 906, on `proxmox-prodesk`) runs AdGuard Home as the LAN DNS
+resolver with ad blocking. Only SSH, DNS (53 TCP/UDP) and the web UI on port 80 are
+reachable; nftables drops everything else.
+
+- Web UI: http://192.168.178.205, user `admin`, password in Bitwarden
+- Config: Ansible seeds `/var/lib/adguardhome/AdGuardHome.yaml` once (upstreams, admin
+  user, ports). AdGuard Home owns that file afterwards, so change settings, blocklists
+  and rewrites in the web UI. A rebuilt VM starts again from the seed.
+- Password: the seed only takes a bcrypt hash, e.g. `htpasswd -nbBC 10 "" <password> | tr -d ':\n'`.
+  Changing the secret does not change the password of a running instance.
+- Upgrade: bump `adguard_home_version`; the built-in updater is off
+- Clients only use it once the Ziggo modem hands it out as DNS server: set
+  `192.168.178.205` by hand in the modem's DHCP/LAN settings. AdGuard Home does not run
+  DHCP, the modem stays the only DHCP server. If the modem has no DNS field, set it per device
+- Single instance: when the VM is down, LAN clients lose DNS. Set the modem's DNS back to
+  automatic to fall back
 
 ### Known limits
 
