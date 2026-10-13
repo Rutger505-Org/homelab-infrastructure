@@ -94,6 +94,20 @@ cd ansible
 ansible-playbook playbook.yml
 ```
 
+### Proxmox nodes
+
+`ansible/proxmox.yml` configures the nodes themselves over root SSH (the
+`homelab-ci` key from the one-time setup), using `ansible/proxmox-inventory.yml`.
+That is a separate inventory so OpenTofu and the VM plays never see the nodes.
+CI runs it after the VM playbook; locally:
+`ansible-playbook -i proxmox-inventory.yml proxmox.yml`.
+
+- Subscription nag: `/usr/local/bin/pve-remove-nag.sh` patches the "No valid
+  subscription" popup out of `proxmoxlib.js`, and an apt hook
+  (`/etc/apt/apt.conf.d/no-nag-script`) re-runs it after every upgrade. The run
+  fails if a widget toolkit update changes the code so the patch no longer applies.
+  Hard-refresh the browser (Ctrl+Shift+R) after the first run.
+
 ### SSH keys
 
 `ssh_authorized_keys` in `ansible/inventory.yml` is the exact `authorized_keys` of

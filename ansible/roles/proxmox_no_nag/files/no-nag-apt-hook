@@ -1,0 +1,2 @@
+// Re-applies the subscription nag patch after proxmox-widget-toolkit upgrades.
+DPkg::Post-Invoke { "/usr/local/bin/pve-remove-nag.sh"; };
