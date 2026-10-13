@@ -3,6 +3,13 @@
 # disk_size and data_disk_size are read by OpenTofu only and all required,
 # there are no defaults (data_disk_size: 0 for no data disk). `os` is the
 # exception: debian unless set to arch.
+#
+# Node memory: proxmox-lade has 16 GB, proxmox-prodesk 8 GB, and Proxmox
+# itself needs some of that. `memory` is a maximum, not a reservation, so the
+# sums below may go over as long as the VMs do not all use their maximum at
+# once. Hand-built VMs (proxmox/manual-vms.tf) count too until they are removed.
+# - proxmox-lade: 13.5 GB here, plus 12.5 GB hand-built
+# - proxmox-prodesk: 8.5 GB here, plus 6 GB hand-built
 all:
   vars:
     ansible_user: debian
