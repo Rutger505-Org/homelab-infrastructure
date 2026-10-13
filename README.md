@@ -207,7 +207,7 @@ reachable; nftables drops everything else.
 
 ### k3s
 
-`k3s-1` (`.211`, id 911) is the server, `k3s-2` (`.212`, id 912) joins it as an agent
+`k3s-1` (`.201`, id 911) is the server, `k3s-2` (`.202`, id 912) joins it as an agent
 with `K3S_TOKEN`. Same version as the hand-built cluster (`k3s_version` in the role
 defaults, bump to upgrade), with ServiceLB disabled for MetalLB. Workloads come from
 kubernetes-infrastructure; PVCs (`local-path`) live on the root disk, so a rebuild
@@ -215,7 +215,7 @@ loses them.
 
 The cluster CAs come from `K3S_CA_BUNDLE` and are put in place before k3s first starts,
 so a rebuilt server signs with the same CAs: existing admin kubeconfigs keep working,
-only pointed at `https://192.168.178.211:6443`. Service account tokens do not survive a
+at `https://192.168.178.201:6443`. Service account tokens do not survive a
 rebuild, they belong to objects in the old cluster; kubernetes-infrastructure recreates them.
 The secret holds the CA private keys, which give full admin access to the cluster.
 
@@ -267,10 +267,10 @@ off while the old VM runs: two Gateways with the same channel credentials both a
 
 The new VMs run next to the old ones, with their own ids and addresses. Per VM:
 
-1. k3s: back up the PVCs, point the `KUBECONFIG` secret of the GitHub org and the
-   `4-rbac` API address (`.201`) in kubernetes-infrastructure and the `tag:ci` grant
-   (and its test) in the tailnet policy at `.211`, rerun its
-   deploys, restore the data, regenerate service account kubeconfigs
+1. k3s: back up the PVCs, shut the old VMs down, then move k3s-1/k3s-2 to their
+   addresses (`.201`/`.202`). The `KUBECONFIG` secret, `4-rbac` and the `tag:ci` grant
+   keep working. Rerun the kubernetes-infrastructure deploys, restore the data,
+   regenerate service account kubeconfigs
 2. Tailscale: check the new router shows the route as approved, then shut the old one down
 3. OpenClaw: stop the old Gateway, copy `~/.openclaw` over, set
    `openclaw_gateway_enabled: true`, update the monitoring target (`.206:18789`) and the
