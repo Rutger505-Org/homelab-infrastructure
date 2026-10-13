@@ -12,6 +12,28 @@ All VMs run Debian. The OpenClaw VM is the exception and runs Arch.
 4. Upload the Debian server ISO
 5. Set static ip to 200. For other installs move to 199, 198, etc.
 
+## Addresses
+
+Static, on 192.168.178.0/24, outside the modem's DHCP range. Gateway `.1`.
+
+- `.199`-`.200`: Proxmox nodes, `.200` proxmox-lade, `.199` proxmox-prodesk
+- `.201`-`.229`: VMs. A replacement VM takes over the address of the VM it replaces
+- `.230`-`.250`: MetalLB, Kubernetes LoadBalancer services (Traefik on `.230`)
+
+The VM addresses are `ansible_host` in `ansible/inventory.yml`; keep this list in sync:
+
+- `.201` k3s-1 (server), `.202` k3s-2 (agent)
+- `.203` Tailscale subnet router (hand-built; the managed one is on `.213` until cutover)
+- `.205` AdGuard Home
+- `.206` OpenClaw (hand-built; the managed one is on `.210` until cutover)
+- `.214` SeaweedFS (`cdn.rutgerpronk.com`)
+- `.215` Home Assistant
+- Free: `.204`, `.207`-`.209`, `.211`, `.212`, `.216`-`.229`
+
+Changing `ansible_host` changes the VM's cloud-init network config. Proxmox derives
+the cloud-init instance id from that config, so on the next boot cloud-init sees a new
+instance and applies the address (and generates new SSH host keys).
+
 ## VMs as code
 
 `proxmox/` (OpenTofu) creates every VM listed in `ansible/inventory.yml` from the
@@ -219,13 +241,14 @@ at `https://192.168.178.201:6443`. Service account tokens do not survive a
 rebuild, they belong to objects in the old cluster; kubernetes-infrastructure recreates them.
 The secret holds the CA private keys, which give full admin access to the cluster.
 
-Export the CAs from a running server (here the hand-built K3s-1). sudo asks for a
-password, so pack them first and upload in a second step:
+Export the CAs from the running server, for example to restore the secret. Pack them
+first and upload in a second step, so a sudo password prompt cannot end up in the secret
+(the hand-built K3s-1 used user `k3s` instead of `debian`):
 
 ```bash
-ssh -t k3s@192.168.178.201 'sudo sh -c "cd /var/lib/rancher/k3s/server/tls && tar -czf ~k3s/k3s-ca.tar.gz *-ca.crt *-ca.key service*.key \$(ls -d etcd/*-ca.* 2>/dev/null) && chown k3s ~k3s/k3s-ca.tar.gz"'
-ssh k3s@192.168.178.201 'tar -tzf k3s-ca.tar.gz'   # expect server-ca.key, client-ca.key, ...
-ssh k3s@192.168.178.201 'base64 -w0 k3s-ca.tar.gz && rm k3s-ca.tar.gz' \
+ssh -t debian@192.168.178.201 'sudo sh -c "cd /var/lib/rancher/k3s/server/tls && tar -czf ~debian/k3s-ca.tar.gz *-ca.crt *-ca.key service*.key \$(ls -d etcd/*-ca.* 2>/dev/null) && chown debian ~debian/k3s-ca.tar.gz"'
+ssh debian@192.168.178.201 'tar -tzf k3s-ca.tar.gz'   # expect server-ca.key, client-ca.key, ...
+ssh debian@192.168.178.201 'base64 -w0 k3s-ca.tar.gz && rm k3s-ca.tar.gz' \
   | gh secret set K3S_CA_BUNDLE -R Rutger505-Org/homelab-infrastructure
 ```
 
