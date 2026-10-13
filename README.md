@@ -12,6 +12,28 @@ All VMs run Debian. The OpenClaw VM is the exception and runs Arch.
 4. Upload the Debian server ISO
 5. Set static ip to 200. For other installs move to 199, 198, etc.
 
+## Addresses
+
+Static, on 192.168.178.0/24, outside the modem's DHCP range. Gateway `.1`.
+
+- `.199`-`.200`: Proxmox nodes, `.200` proxmox-lade, `.199` proxmox-prodesk
+- `.201`-`.229`: VMs. A replacement VM takes over the address of the VM it replaces
+- `.230`-`.250`: MetalLB, Kubernetes LoadBalancer services (Traefik on `.230`)
+
+The VM addresses are `ansible_host` in `ansible/inventory.yml`; keep this list in sync:
+
+- `.201` k3s-1 (server), `.202` k3s-2 (agent)
+- `.203` Tailscale subnet router (hand-built; the managed one is on `.213` until cutover)
+- `.205` AdGuard Home
+- `.206` OpenClaw (hand-built; the managed one is on `.210` until cutover)
+- `.214` SeaweedFS (`cdn.rutgerpronk.com`)
+- `.215` Home Assistant
+- Free: `.204`, `.207`-`.209`, `.211`, `.212`, `.216`-`.229`
+
+Changing `ansible_host` changes the VM's cloud-init network config. Proxmox derives
+the cloud-init instance id from that config, so on the next boot cloud-init sees a new
+instance and applies the address (and generates new SSH host keys).
+
 ## VMs as code
 
 `proxmox/` (OpenTofu) creates every VM listed in `ansible/inventory.yml` from the
@@ -230,7 +252,7 @@ through a Cloudflare DNS-01 challenge, so nothing is exposed to the internet. On
 
 ### k3s
 
-`k3s-1` (`.211`, id 911) is the server, `k3s-2` (`.212`, id 912) joins it as an agent
+`k3s-1` (`.201`, id 911) is the server, `k3s-2` (`.202`, id 912) joins it as an agent
 with `K3S_TOKEN`. Same version as the hand-built cluster (`k3s_version` in the role
 defaults, bump to upgrade), with ServiceLB disabled for MetalLB. Workloads come from
 kubernetes-infrastructure; PVCs (`local-path`) live on the root disk, so a rebuild
@@ -238,17 +260,18 @@ loses them.
 
 The cluster CAs come from `K3S_CA_BUNDLE` and are put in place before k3s first starts,
 so a rebuilt server signs with the same CAs: existing admin kubeconfigs keep working,
-only pointed at `https://192.168.178.211:6443`. Service account tokens do not survive a
+at `https://192.168.178.201:6443`. Service account tokens do not survive a
 rebuild, they belong to objects in the old cluster; kubernetes-infrastructure recreates them.
 The secret holds the CA private keys, which give full admin access to the cluster.
 
-Export the CAs from a running server (here the hand-built K3s-1). sudo asks for a
-password, so pack them first and upload in a second step:
+Export the CAs from the running server, for example to restore the secret. Pack them
+first and upload in a second step, so a sudo password prompt cannot end up in the secret
+(the hand-built K3s-1 used user `k3s` instead of `debian`):
 
 ```bash
-ssh -t k3s@192.168.178.201 'sudo sh -c "cd /var/lib/rancher/k3s/server/tls && tar -czf ~k3s/k3s-ca.tar.gz *-ca.crt *-ca.key service*.key \$(ls -d etcd/*-ca.* 2>/dev/null) && chown k3s ~k3s/k3s-ca.tar.gz"'
-ssh k3s@192.168.178.201 'tar -tzf k3s-ca.tar.gz'   # expect server-ca.key, client-ca.key, ...
-ssh k3s@192.168.178.201 'base64 -w0 k3s-ca.tar.gz && rm k3s-ca.tar.gz' \
+ssh -t debian@192.168.178.201 'sudo sh -c "cd /var/lib/rancher/k3s/server/tls && tar -czf ~debian/k3s-ca.tar.gz *-ca.crt *-ca.key service*.key \$(ls -d etcd/*-ca.* 2>/dev/null) && chown debian ~debian/k3s-ca.tar.gz"'
+ssh debian@192.168.178.201 'tar -tzf k3s-ca.tar.gz'   # expect server-ca.key, client-ca.key, ...
+ssh debian@192.168.178.201 'base64 -w0 k3s-ca.tar.gz && rm k3s-ca.tar.gz' \
   | gh secret set K3S_CA_BUNDLE -R Rutger505-Org/homelab-infrastructure
 ```
 
@@ -290,10 +313,10 @@ off while the old VM runs: two Gateways with the same channel credentials both a
 
 The new VMs run next to the old ones, with their own ids and addresses. Per VM:
 
-1. k3s: back up the PVCs, point the `KUBECONFIG` secret of the GitHub org and the
-   `4-rbac` API address (`.201`) in kubernetes-infrastructure and the `tag:ci` grant
-   (and its test) in the tailnet policy at `.211`, rerun its
-   deploys, restore the data, regenerate service account kubeconfigs
+1. k3s: back up the PVCs, shut the old VMs down, then move k3s-1/k3s-2 to their
+   addresses (`.201`/`.202`). The `KUBECONFIG` secret, `4-rbac` and the `tag:ci` grant
+   keep working. Rerun the kubernetes-infrastructure deploys, restore the data,
+   regenerate service account kubeconfigs
 2. Tailscale: check the new router shows the route as approved, then shut the old one down
 3. OpenClaw: stop the old Gateway, copy `~/.openclaw` over, set
    `openclaw_gateway_enabled: true`, update the monitoring target (`.206:18789`) and the

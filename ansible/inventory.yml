@@ -10,6 +10,13 @@
 # once. Hand-built VMs (proxmox/manual-vms.tf) count too until they are removed.
 # - proxmox-lade: 13.5 GB here, plus 12.5 GB hand-built
 # - proxmox-prodesk: 6.5 GB here, plus 6 GB hand-built
+#
+# LAN addresses (192.168.178.x, static, outside the router's DHCP range):
+# - .199-.200: Proxmox nodes
+# - .201-.229: VMs, a VM keeps the address of the VM it replaced
+# - .230-.250: MetalLB, Kubernetes LoadBalancer services
+# Changing ansible_host changes the VM's cloud-init network config; the VM
+# picks it up on its next boot.
 all:
   vars:
     ansible_user: debian
@@ -37,7 +44,7 @@ all:
     k3s_server:
       hosts:
         k3s-1:
-          ansible_host: 192.168.178.211
+          ansible_host: 192.168.178.201
           vm_id: 911
           proxmox_node: proxmox-lade
           cores: 4
@@ -47,7 +54,7 @@ all:
     k3s_agent:
       hosts:
         k3s-2:
-          ansible_host: 192.168.178.212
+          ansible_host: 192.168.178.202
           vm_id: 912
           proxmox_node: proxmox-prodesk
           cores: 4
