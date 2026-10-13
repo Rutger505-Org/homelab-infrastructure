@@ -38,11 +38,13 @@
   when: seaweedfs_data_fs.rc == 2
   changed_when: true
 
+# Once mounted this is the disk's root, which "Create directories" also
+# manages: keep the modes equal, or every run flips it back and forth.
 - name: Create data mount point
   ansible.builtin.file:
     path: "{{ seaweedfs_data_dir }}"
     state: directory
-    mode: "0755"
+    mode: "0750"
 
 - name: Add data disk to fstab
   ansible.builtin.lineinfile:
