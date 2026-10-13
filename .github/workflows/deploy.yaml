@@ -184,10 +184,15 @@ jobs:
           fi
 
           # A VM the PR adds does not exist yet: check the hosts that are up.
-          hosts=$(ansible "$limit" -i "$inventory" -m ansible.builtin.ping -o \
-            | awk '$3 == "SUCCESS" { print $1 }' | paste -sd, -) || true
-          if [ -z "$hosts" ]; then
-            echo "::notice::No $SERVICE host is up yet, nothing to check."
+          up=()
+          for host in $(ANSIBLE_FORCE_COLOR=false ansible "$limit" -i "$inventory" --list-hosts | tail -n +2); do
+            if ansible "$host" -i "$inventory" -m ansible.builtin.ping > /dev/null 2>&1; then
+              up+=("$host")
+            else
+              echo "::notice::$host is not up, skipping it."
+            fi
+          done
+          if [ ${#up[@]} -eq 0 ]; then
             exit 0
           fi
-          ansible-playbook -i "$inventory" "$playbook" --limit "$hosts" --check --diff
+          ansible-playbook -i "$inventory" "$playbook" --limit "$(IFS=,; echo "${up[*]}")" --check --diff
