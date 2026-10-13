@@ -1,6 +1,7 @@
 # Hand-built VMs (see the README sections below), imported as they are so
 # OpenTofu tracks them. Every attribute mirrors the live config: a plan against
 # them must show no changes. Nothing here reinstalls or reconfigures them.
+# The one exception is the node tag, which only changes metadata.
 locals {
   manual_vms = {
     k3s-1 = {
@@ -58,6 +59,7 @@ resource "proxmox_virtual_environment_vm" "manual" {
   name      = each.value.name
   vm_id     = each.value.vm_id
   node_name = each.value.node_name
+  tags      = [each.value.node_name]
 
   scsi_hardware = "virtio-scsi-single"
   boot_order    = ["scsi0", "ide2", "net0"]
