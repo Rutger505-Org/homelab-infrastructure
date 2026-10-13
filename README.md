@@ -64,6 +64,7 @@ Secrets:
 - `SEAWEEDFS_ADMIN_ACCESS_KEY`, `SEAWEEDFS_ADMIN_SECRET_KEY`: S3 admin credentials
 - `MQTT_USERNAME`, `MQTT_PASSWORD`: Mosquitto login on the Home Assistant VM
 - `ADGUARD_ADMIN_PASSWORD_HASH`: bcrypt hash of the AdGuard Home web UI password
+- `ADGUARD_ADMIN_PASSWORD`: the same password in plain text, for `internal-dns/`
 
 Variables:
 - `R2_ENDPOINT`: `https://<account-id>.r2.cloudflarestorage.com`
@@ -195,6 +196,23 @@ export CLOUDFLARE_API_TOKEN=...
 tofu -chdir=dns init
 tofu -chdir=dns plan
 ```
+
+## Internal DNS
+
+`internal-dns/` (OpenTofu, `gmichels/adguard` provider) manages DNS rewrites in AdGuard Home:
+`<service>.homelab.rutgerpronk.com` resolves to the LAN address for every client that uses
+AdGuard Home as DNS server. Add a service to `records` in `internal-dns/main.tf` and merge.
+
+- DNS has no ports: `https://proxmox-lade.homelab.rutgerpronk.com:8006`,
+  `http://openclaw.homelab.rutgerpronk.com:18789`
+- `grafana` points at Traefik, which still needs a route for that host
+- Applied on every push to `internal-dns/` and after every successful homelab deploy, so a
+  rebuilt AdGuard VM gets its rewrites back. Rewrites added by hand in the web UI are left alone
+- Own state key in the same R2 bucket and passphrase
+
+One-time setup:
+- GitHub secret `ADGUARD_ADMIN_PASSWORD`: the AdGuard Home web UI password (plain text)
+- Tailnet policy: allow `tag:ci-homelab` to reach `192.168.178.205:80`
 
 ## Tailscale
 
