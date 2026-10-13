@@ -1,0 +1,22 @@
+- name: Install nag removal script
+  ansible.builtin.copy:
+    src: pve-remove-nag.sh
+    dest: /usr/local/bin/pve-remove-nag.sh
+    mode: "0755"
+
+- name: Re-run it after every apt/dpkg run
+  ansible.builtin.copy:
+    src: no-nag-apt-hook
+    dest: /etc/apt/apt.conf.d/no-nag-script
+    mode: "0644"
+
+- name: Patch the web UI now
+  ansible.builtin.command: /usr/local/bin/pve-remove-nag.sh
+  register: proxmox_no_nag_patch
+  changed_when: proxmox_no_nag_patch.stdout | length > 0
+
+# The sed is tied to the current proxmoxlib.js code; fail loudly if an
+# upgrade changed it so the patch no longer applies.
+- name: Check the patch applied
+  ansible.builtin.command: grep -q NoMoreNagging /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js
+  changed_when: false

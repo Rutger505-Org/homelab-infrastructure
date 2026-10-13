@@ -91,3 +91,8 @@ jobs:
           MQTT_PASSWORD: ${{ secrets.MQTT_PASSWORD }}
           ADGUARD_ADMIN_PASSWORD_HASH: ${{ secrets.ADGUARD_ADMIN_PASSWORD_HASH }}
         run: ansible-playbook playbook.yml
+
+      - name: Ansible configure Proxmox nodes
+        if: github.event_name != 'pull_request'
+        working-directory: ./ansible
+        run: ansible-playbook -i proxmox-inventory.yml proxmox.yml

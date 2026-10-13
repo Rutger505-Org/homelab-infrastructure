@@ -70,6 +70,7 @@ Secrets:
 - `OPENCLAW_SSH_PRIVATE_KEY`: SSH key of the OpenClaw VM, with access to `Rutger505/dev-env` and `Rutger505/openclaw-config`
 - `MQTT_USERNAME`, `MQTT_PASSWORD`: Mosquitto login on the Home Assistant VM
 - `ADGUARD_ADMIN_PASSWORD_HASH`: bcrypt hash of the AdGuard Home web UI password
+- `ADGUARD_ADMIN_PASSWORD`: the same password in plain text, for `internal-dns/`
 
 Variables:
 - `R2_ENDPOINT`: `https://<account-id>.r2.cloudflarestorage.com`
@@ -100,6 +101,20 @@ tofu -chdir=proxmox apply
 cd ansible
 ansible-playbook playbook.yml
 ```
+
+### Proxmox nodes
+
+`ansible/proxmox.yml` configures the nodes themselves over root SSH (the
+`homelab-ci` key from the one-time setup), using `ansible/proxmox-inventory.yml`.
+That is a separate inventory so OpenTofu and the VM plays never see the nodes.
+CI runs it after the VM playbook; locally:
+`ansible-playbook -i proxmox-inventory.yml proxmox.yml`.
+
+- Subscription nag: `/usr/local/bin/pve-remove-nag.sh` patches the "No valid
+  subscription" popup out of `proxmoxlib.js`, and an apt hook
+  (`/etc/apt/apt.conf.d/no-nag-script`) re-runs it after every upgrade. The run
+  fails if a widget toolkit update changes the code so the patch no longer applies.
+  Hard-refresh the browser (Ctrl+Shift+R) after the first run.
 
 ### SSH keys
 
@@ -235,7 +250,8 @@ The new VMs run next to the old ones, with their own ids and addresses. Per VM:
    deploys, restore the data
 2. Tailscale: check the new router shows the route as approved, then shut the old one down
 3. OpenClaw: stop the old Gateway, copy `~/.openclaw` over, set
-   `openclaw_gateway_enabled: true`, update the monitoring target (`.206:18789`)
+   `openclaw_gateway_enabled: true`, update the monitoring target (`.206:18789`) and the
+   `openclaw` record in `internal-dns/main.tf`
 4. Remove the old VM from `proxmox/manual-vms.tf` with a `removed` block
    (`lifecycle { destroy = false }`), then delete it in Proxmox
 
@@ -263,6 +279,23 @@ export CLOUDFLARE_API_TOKEN=...
 tofu -chdir=dns init
 tofu -chdir=dns plan
 ```
+
+## Internal DNS
+
+`internal-dns/` (OpenTofu, `gmichels/adguard` provider) manages DNS rewrites in AdGuard Home:
+`<service>.homelab.rutgerpronk.com` resolves to the LAN address for every client that uses
+AdGuard Home as DNS server. Add a service to `records` in `internal-dns/main.tf` and merge.
+
+- DNS has no ports: `https://proxmox-lade.homelab.rutgerpronk.com:8006`,
+  `http://openclaw.homelab.rutgerpronk.com:18789`
+- `grafana` points at Traefik, which still needs a route for that host
+- Applied on every push to `internal-dns/` and after every successful homelab deploy, so a
+  rebuilt AdGuard VM gets its rewrites back. Rewrites added by hand in the web UI are left alone
+- Own state key in the same R2 bucket and passphrase
+
+One-time setup:
+- GitHub secret `ADGUARD_ADMIN_PASSWORD`: the AdGuard Home web UI password (plain text)
+- Tailnet policy: allow `tag:ci-homelab` to reach `192.168.178.205:80`
 
 ## Hand-built VMs
 

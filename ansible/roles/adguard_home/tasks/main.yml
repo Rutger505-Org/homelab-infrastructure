@@ -73,12 +73,13 @@
     src: https://github.com/AdguardTeam/AdGuardHome/releases/download/{{ adguard_home_version }}/AdGuardHome_linux_amd64.tar.gz
     dest: /opt/adguard-home/{{ adguard_home_version }}
     remote_src: true
-    extra_opts: [--strip-components=1]
-    creates: /opt/adguard-home/{{ adguard_home_version }}/AdGuardHome
+    # The archive holds ./AdGuardHome/AdGuardHome; the leading ./ makes
+    # --strip-components unreliable, so keep the directory.
+    creates: /opt/adguard-home/{{ adguard_home_version }}/AdGuardHome/AdGuardHome
 
 - name: Link AdGuardHome binary
   ansible.builtin.file:
-    src: /opt/adguard-home/{{ adguard_home_version }}/AdGuardHome
+    src: /opt/adguard-home/{{ adguard_home_version }}/AdGuardHome/AdGuardHome
     dest: /usr/local/bin/AdGuardHome
     state: link
   notify: Restart adguard-home
