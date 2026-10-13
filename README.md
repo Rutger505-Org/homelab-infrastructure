@@ -211,13 +211,12 @@ Kubeconfig: `sudo cat /etc/rancher/k3s/k3s.yaml` on k3s-1, with `127.0.0.1` repl
 
 ### Tailscale router
 
-`tailscale` (`.213`, id 913) advertises `192.168.178.0/24` as `tag:homelab-router`.
+`tailscale` (`.213`, id 913) advertises `192.168.178.0/24` as `tag:homelab`.
 It joins with an OAuth client secret instead of an auth key, which never expires, so
-a rebuilt VM can always rejoin. One-time setup in the tailnet policy:
+a rebuilt VM can always rejoin. The tailnet policy already owns `tag:homelab` and
+auto-approves the route for it. One-time setup:
 
-- add `tag:homelab-router` to `tagOwners`
-- add `"autoApprovers": {"routes": {"192.168.178.0/24": ["tag:homelab-router"]}}`
-- create an OAuth client with the `auth_keys` write scope and `tag:homelab-router`,
+- create an OAuth client with the `auth_keys` write scope and `tag:homelab`,
   store its secret as `TAILSCALE_ROUTER_OAUTH_SECRET`
 
 Two routers for the same subnet fail over to each other, so it can run next to the
@@ -246,7 +245,8 @@ off while the old VM runs: two Gateways with the same channel credentials both a
 The new VMs run next to the old ones, with their own ids and addresses. Per VM:
 
 1. k3s: back up the PVCs, point the `KUBECONFIG` secret of the GitHub org and the
-   `4-rbac` API address (`.201`) in kubernetes-infrastructure at `.211`, rerun its
+   `4-rbac` API address (`.201`) in kubernetes-infrastructure and the `tag:ci` grant
+   (and its test) in the tailnet policy at `.211`, rerun its
    deploys, restore the data
 2. Tailscale: check the new router shows the route as approved, then shut the old one down
 3. OpenClaw: stop the old Gateway, copy `~/.openclaw` over, set
