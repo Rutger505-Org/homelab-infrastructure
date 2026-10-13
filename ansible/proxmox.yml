@@ -1,0 +1,5 @@
+- name: Configure Proxmox nodes
+  hosts: proxmox
+  gather_facts: false
+  roles:
+    - proxmox_no_nag

@@ -1,0 +1,14 @@
+# The Proxmox nodes themselves. Kept out of inventory.yml on purpose: OpenTofu
+# creates a VM for every host there, and the VM plays (cloud-init wait,
+# authorized_keys rewrite) must never touch the nodes. Run with:
+#   ansible-playbook -i proxmox-inventory.yml proxmox.yml
+all:
+  vars:
+    ansible_user: root
+  children:
+    proxmox:
+      hosts:
+        proxmox-lade:
+          ansible_host: 192.168.178.200
+        proxmox-prodesk:
+          ansible_host: 192.168.178.199
