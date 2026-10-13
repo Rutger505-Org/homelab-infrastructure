@@ -43,6 +43,16 @@ variable "snippet_datastore_id" {
   type        = string
 }
 
+variable "os" {
+  description = "Distribution of the cloud image: debian or arch"
+  type        = string
+
+  validation {
+    condition     = contains(["debian", "arch"], var.os)
+    error_message = "os must be debian or arch."
+  }
+}
+
 variable "image_file_id" {
   description = "Cloud image the root disk is imported from"
   type        = string
@@ -72,7 +82,6 @@ variable "bridge" {
 variable "username" {
   description = "Login user created by cloud-init"
   type        = string
-  default     = "debian"
 }
 
 variable "ssh_public_keys" {

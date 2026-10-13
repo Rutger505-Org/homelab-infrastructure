@@ -28,6 +28,12 @@ variable "debian_image_url" {
   default     = "https://cloud.debian.org/images/cloud/trixie/latest/debian-13-genericcloud-amd64.qcow2"
 }
 
+variable "arch_image_url" {
+  description = "Arch Linux cloud image, for hosts with `os: arch`. Downloaded once per node and never refreshed, like the Debian image."
+  type        = string
+  default     = "https://geo.mirror.pkgbuild.com/images/latest/Arch-Linux-x86_64-cloudimg.qcow2"
+}
+
 variable "lan_prefix_length" {
   description = "Prefix length of the LAN the VMs are on"
   type        = number

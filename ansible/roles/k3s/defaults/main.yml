@@ -1,0 +1,7 @@
+# Same as the hand-built cluster. Bump to upgrade: the install script reruns
+# when the installed version differs.
+k3s_version: v1.34.3+k3s1
+# Shared secret agents join the server with. Set on the play: server or agent.
+k3s_token: "{{ lookup('ansible.builtin.env', 'K3S_TOKEN') }}"
+k3s_server_address: "{{ hostvars[groups['k3s_server'][0]].ansible_host }}"
+k3s_service: "{{ 'k3s' if k3s_role == 'server' else 'k3s-agent' }}"

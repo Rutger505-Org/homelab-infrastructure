@@ -1,7 +1,8 @@
 # Single source of truth for the VMs: OpenTofu creates a VM for every
 # host below, Ansible configures it. vm_id, proxmox_node, cores, memory,
 # disk_size and data_disk_size are read by OpenTofu only and all required,
-# there are no defaults (data_disk_size: 0 for no data disk).
+# there are no defaults (data_disk_size: 0 for no data disk). `os` is the
+# exception: debian unless set to arch.
 all:
   vars:
     ansible_user: debian
@@ -24,3 +25,50 @@ all:
           memory: 1024
           disk_size: 10
           data_disk_size: 60
+    # Replace the hand-built VMs (K3s-1, K3s-2, Tailscale, OpenClaw in
+    # proxmox/manual-vms.tf), which keep running next to these until cut over.
+    k3s_server:
+      hosts:
+        k3s-1:
+          ansible_host: 192.168.178.211
+          vm_id: 911
+          proxmox_node: proxmox-lade
+          cores: 4
+          memory: 6144
+          disk_size: 20
+          data_disk_size: 0
+    k3s_agent:
+      hosts:
+        k3s-2:
+          ansible_host: 192.168.178.212
+          vm_id: 912
+          proxmox_node: proxmox-prodesk
+          cores: 4
+          memory: 6144
+          disk_size: 20
+          data_disk_size: 0
+    tailscale_router:
+      hosts:
+        tailscale:
+          ansible_host: 192.168.178.213
+          vm_id: 913
+          proxmox_node: proxmox-lade
+          cores: 1
+          memory: 512
+          disk_size: 8
+          data_disk_size: 0
+    openclaw_gateway:
+      hosts:
+        openclaw:
+          ansible_host: 192.168.178.210
+          vm_id: 910
+          proxmox_node: proxmox-lade
+          os: arch
+          ansible_user: openclaw
+          cores: 4
+          memory: 6144
+          disk_size: 65
+          data_disk_size: 0
+          # Off until the state is moved over from the old VM: two Gateways
+          # with the same channel credentials would both answer.
+          openclaw_gateway_enabled: false

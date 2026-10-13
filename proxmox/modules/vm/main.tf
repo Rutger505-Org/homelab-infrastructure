@@ -9,14 +9,17 @@ terraform {
 locals {
   # Only what Ansible needs to take over: a user with keys, and the guest agent
   # that Proxmox waits on to report the VM's address.
-  cloud_config = "#cloud-config\n${yamlencode({
+  # Arch does not support partial upgrades: installing on top of a fresh
+  # package database without upgrading can break the system. Only set for Arch
+  # so the Debian snippets stay byte for byte the same.
+  cloud_config = "#cloud-config\n${yamlencode(merge(var.os == "arch" ? { package_upgrade = true } : {}, {
     hostname         = var.name
     manage_etc_hosts = true
     package_update   = true
     packages         = ["qemu-guest-agent"]
     users = [{
       name                = var.username
-      groups              = ["sudo"]
+      groups              = [var.os == "arch" ? "wheel" : "sudo"]
       shell               = "/bin/bash"
       sudo                = "ALL=(ALL) NOPASSWD:ALL"
       ssh_authorized_keys = var.ssh_public_keys
@@ -24,7 +27,7 @@ locals {
     ssh_pwauth   = false
     disable_root = true
     runcmd       = [["systemctl", "enable", "--now", "qemu-guest-agent"]]
-  })}"
+  }))}"
 }
 
 resource "proxmox_virtual_environment_file" "cloud_config" {

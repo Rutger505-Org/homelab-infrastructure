@@ -1,0 +1,22 @@
+# Only used for the first install, OpenClaw updates itself after that.
+openclaw_version: latest
+# Leave off until the state (sessions, memory, credentials) is copied over from
+# the old VM, or two Gateways answer on the same channels.
+openclaw_gateway_enabled: false
+openclaw_gateway_port: 18789
+# Contents of ~/.openclaw/.env. Only written when missing: the sync adds new
+# secrets to it on the VM, so the copy here goes stale.
+openclaw_env: "{{ lookup('ansible.builtin.env', 'OPENCLAW_ENV') }}"
+# GitHub key of the VM: clones and pushes dev-env and openclaw-config.
+openclaw_ssh_private_key: "{{ lookup('ansible.builtin.env', 'OPENCLAW_SSH_PRIVATE_KEY') }}"
+openclaw_packages:
+  - base-devel
+  - git
+  - openssh
+  - nodejs
+  - npm
+  - bun
+  - jq
+  - gitleaks
+  - zsh
+  - tmux

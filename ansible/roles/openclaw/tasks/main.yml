@@ -1,0 +1,131 @@
+- name: Check secrets
+  ansible.builtin.assert:
+    that:
+      - openclaw_env | length > 0
+      - openclaw_ssh_private_key | length > 0
+    fail_msg: Set OPENCLAW_ENV and OPENCLAW_SSH_PRIVATE_KEY.
+    quiet: true
+  no_log: true
+
+- name: Set paths
+  ansible.builtin.set_fact:
+    openclaw_home: "{{ ansible_facts.user_dir }}"
+    openclaw_bun_install: "{{ ansible_facts.user_dir }}/.local/share/.bun"
+    # systemctl --user needs the user's bus, which an Ansible session does not always set up.
+    openclaw_user_env:
+      XDG_RUNTIME_DIR: /run/user/{{ ansible_facts.user_uid }}
+
+# Arch only supports full upgrades, so installing always upgrades too.
+- name: Install packages
+  become: true
+  ansible.builtin.command:
+    argv: "{{ ['pacman', '-Syu', '--needed', '--noconfirm'] + openclaw_packages }}"
+  register: openclaw_pacman
+  changed_when: "'there is nothing to do' not in openclaw_pacman.stdout"
+
+- name: Check for yay
+  ansible.builtin.stat:
+    path: /usr/bin/yay
+  register: openclaw_yay
+
+- name: Build yay
+  when: not openclaw_yay.stat.exists
+  block:
+    - name: Download yay-bin
+      ansible.builtin.git:
+        repo: https://aur.archlinux.org/yay-bin.git
+        dest: "{{ openclaw_home }}/Temporary/yay-bin"
+        version: master
+
+    - name: Install yay-bin
+      ansible.builtin.command: makepkg -si --noconfirm
+      args:
+        chdir: "{{ openclaw_home }}/Temporary/yay-bin"
+      changed_when: true
+
+    - name: Remove yay-bin build
+      ansible.builtin.file:
+        path: "{{ openclaw_home }}/Temporary/yay-bin"
+        state: absent
+
+# User services (Gateway, sync timer) keep running without a login session.
+- name: Enable lingering
+  become: true
+  ansible.builtin.command: loginctl enable-linger {{ ansible_user }}
+  args:
+    creates: /var/lib/systemd/linger/{{ ansible_user }}
+
+- name: Write GitHub SSH key
+  ansible.builtin.copy:
+    dest: "{{ openclaw_home }}/.ssh/id_ed25519"
+    content: "{{ openclaw_ssh_private_key | trim }}\n"
+    mode: "0600"
+  no_log: true
+
+# Not installed: dev-env's install.sh asks for its optional groups interactively.
+- name: Clone dev-env
+  ansible.builtin.git:
+    repo: git@github.com:Rutger505/dev-env.git
+    dest: "{{ openclaw_home }}/.local/share/dev-env"
+    version: main
+    accept_newhostkey: true
+    update: false
+
+- name: Create OpenClaw directory
+  ansible.builtin.file:
+    path: "{{ openclaw_home }}/.openclaw"
+    state: directory
+    mode: "0700"
+
+- name: Write OpenClaw secrets
+  ansible.builtin.copy:
+    dest: "{{ openclaw_home }}/.openclaw/.env"
+    content: "{{ openclaw_env | trim }}\n"
+    mode: "0600"
+    force: false
+  no_log: true
+
+- name: Check for the config checkout
+  ansible.builtin.stat:
+    path: "{{ openclaw_home }}/.openclaw/.git"
+  register: openclaw_config_git
+
+# Steps from the openclaw-config README: install.sh turns ~/.openclaw into the
+# checkout and enables the sync timer.
+- name: Set up the config repo
+  when: not openclaw_config_git.stat.exists
+  block:
+    - name: Clone openclaw-config
+      ansible.builtin.git:
+        repo: git@github.com:Rutger505/openclaw-config.git
+        dest: "{{ openclaw_home }}/Temporary/openclaw-config"
+        version: main
+        accept_newhostkey: true
+
+    - name: Run the config install script
+      ansible.builtin.command: "{{ openclaw_home }}/Temporary/openclaw-config/sync/install.sh"
+      environment: "{{ openclaw_user_env }}"
+      changed_when: true
+
+    - name: Remove the temporary clone
+      ansible.builtin.file:
+        path: "{{ openclaw_home }}/Temporary/openclaw-config"
+        state: absent
+
+- name: Install OpenClaw
+  ansible.builtin.command:
+    argv: [bun, install, --global, "openclaw@{{ openclaw_version }}"]
+    creates: "{{ openclaw_bun_install }}/install/global/node_modules/openclaw"
+  environment:
+    BUN_INSTALL: "{{ openclaw_bun_install }}"
+
+- name: Install the Gateway service
+  ansible.builtin.command:
+    argv:
+      - "{{ openclaw_bun_install }}/bin/openclaw"
+      - gateway
+      - install
+      - --port={{ openclaw_gateway_port }}
+    creates: "{{ openclaw_home }}/.config/systemd/user/openclaw-gateway.service"
+  environment: "{{ openclaw_user_env | combine({'PATH': openclaw_bun_install + '/bin:/usr/local/bin:/usr/bin'}) }}"
+  when: openclaw_gateway_enabled
