@@ -1,12 +1,9 @@
 # background:text (hex) per tag shown in the Proxmox UI. Every node in
 # proxmox-inventory.yml sets proxmox_tag_color for the tag OpenTofu puts on the
 # VMs running on it.
-proxmox_tag_colors_extra:
-  opentofu: FFDA18:000000
-
 proxmox_tag_colors: >-
-  {{ proxmox_tag_colors_extra | combine(dict(groups['proxmox']
-     | zip(groups['proxmox'] | map('extract', hostvars, 'proxmox_tag_color')))) }}
+  {{ dict(groups['proxmox']
+     | zip(groups['proxmox'] | map('extract', hostvars, 'proxmox_tag_color'))) }}
 
 proxmox_tag_colors_style: >-
   color-map={% for tag, color in proxmox_tag_colors.items() %}{{ tag }}:{{ color }}{{ ';' if not loop.last }}{% endfor %}
