@@ -107,5 +107,8 @@ resource "proxmox_virtual_environment_vm" "manual" {
   lifecycle {
     # Hand-built with no way to recreate them from code: never destroy or replace.
     prevent_destroy = true
+    # Power state is managed by hand: during cutover the old VMs are shut down
+    # and must stay down, their addresses are reused by the managed VMs.
+    ignore_changes = [started]
   }
 }
