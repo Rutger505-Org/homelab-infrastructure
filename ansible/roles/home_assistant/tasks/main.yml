@@ -27,6 +27,7 @@
   ansible.builtin.command: blkid -o value -s TYPE {{ home_assistant_data_device }}
   register: home_assistant_data_fs
   changed_when: false
+  check_mode: false
   failed_when: home_assistant_data_fs.rc not in [0, 2]
 
 # Only ever formats an empty disk; blkid exits 2 when it finds no filesystem.
@@ -51,6 +52,7 @@
   ansible.builtin.command: findmnt --mountpoint {{ home_assistant_data_dir }}
   register: home_assistant_data_mount
   changed_when: false
+  check_mode: false
   failed_when: false
 
 # ansible.posix.mount is not in ansible-core, which is all CI installs.

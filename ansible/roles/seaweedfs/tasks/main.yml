@@ -29,6 +29,7 @@
   ansible.builtin.command: blkid -o value -s TYPE {{ seaweedfs_data_device }}
   register: seaweedfs_data_fs
   changed_when: false
+  check_mode: false
   failed_when: seaweedfs_data_fs.rc not in [0, 2]
 
 # Only ever formats an empty disk; blkid exits 2 when it finds no filesystem.
@@ -37,11 +38,13 @@
   when: seaweedfs_data_fs.rc == 2
   changed_when: true
 
+# Once mounted this is the disk's root, which "Create directories" also
+# manages: keep the modes equal, or every run flips it back and forth.
 - name: Create data mount point
   ansible.builtin.file:
     path: "{{ seaweedfs_data_dir }}"
     state: directory
-    mode: "0755"
+    mode: "0750"
 
 - name: Add data disk to fstab
   ansible.builtin.lineinfile:
@@ -53,6 +56,7 @@
   ansible.builtin.command: findmnt --mountpoint {{ seaweedfs_data_dir }}
   register: seaweedfs_data_mount
   changed_when: false
+  check_mode: false
   failed_when: false
 
 # ansible.posix.mount is not in ansible-core, which is all CI installs.
@@ -145,6 +149,7 @@
   delay: 2
   until: seaweedfs_bucket_list.rc == 0 and 'error' not in seaweedfs_bucket_list.stdout | lower
   changed_when: false
+  check_mode: false
 
 - name: Create buckets
   ansible.builtin.command: weed shell
