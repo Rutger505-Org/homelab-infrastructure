@@ -45,6 +45,14 @@
 
 # One directory per version, so bumping caddy_version installs and switches to
 # the new binary and the old one stays around for a rollback.
+- name: Check for the Caddy binary
+  ansible.builtin.stat:
+    path: /opt/caddy/{{ caddy_version }}/caddy
+  register: caddy_binary
+
+# Only when this version is missing: with an existing file get_url still asks
+# the build service (If-Modified-Since), which then builds Caddy again and
+# can hang for the full timeout on every run.
 - name: Download Caddy
   ansible.builtin.get_url:
     url: "{{ caddy_download_url }}"
@@ -55,6 +63,7 @@
   retries: 3
   delay: 10
   until: caddy_download is succeeded
+  when: not caddy_binary.stat.exists
 
 - name: Link caddy binary
   ansible.builtin.file:
