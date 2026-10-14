@@ -24,7 +24,6 @@ caddy_routes:
     insecure_tls: true
   home-assistant:
     upstream: http://192.168.178.215:8123
-  # Traefik in k3s, until Grafana gets its own internal route there.
+  # Grafana's own MetalLB address in k3s (grafana_load_balancer_ip in kubernetes-infrastructure).
   grafana:
-    upstream: https://192.168.178.230
-    upstream_host: grafana.rutgerpronk.com
+    upstream: http://192.168.178.231:80
