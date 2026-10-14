@@ -282,6 +282,12 @@ defaults, bump to upgrade), with ServiceLB disabled for MetalLB. Workloads come 
 kubernetes-infrastructure; PVCs (`local-path`) live on the root disk, so a rebuild
 loses them.
 
+Pods get DNS from `/etc/rancher/k3s/resolv.conf` (`resolv-conf`, `k3s_nameservers`),
+not the node's resolv.conf. The nodes carry `search rutgerpronk.com`, and with the public
+`*.rutgerpronk.com` wildcard every external lookup from a pod (`ndots:5`) first resolved
+to the home IP: cert-manager hit `acme-v02.api.letsencrypt.org.rutgerpronk.com` and never
+issued a certificate. Changing it only affects pods created afterwards.
+
 The cluster CAs come from `K3S_CA_BUNDLE` and are put in place before k3s first starts,
 so a rebuilt server signs with the same CAs: existing admin kubeconfigs keep working,
 at `https://192.168.178.201:6443`, and so does the read-only kubeconfig from

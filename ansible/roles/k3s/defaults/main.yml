@@ -9,4 +9,13 @@ k3s_token: "{{ lookup('ansible.builtin.env', 'K3S_TOKEN') }}"
 k3s_ca_bundle: "{{ lookup('ansible.builtin.env', 'K3S_CA_BUNDLE') }}"
 k3s_tls_dir: /var/lib/rancher/k3s/server/tls
 k3s_server_address: "{{ hostvars[groups['k3s_server'][0]].ansible_host }}"
+# Upstream DNS for pods, written to k3s_resolv_conf (the LAN gateway, like the
+# VMs themselves). The file deliberately has no search line: the nodes inherit
+# "search rutgerpronk.com", and with the public *.rutgerpronk.com wildcard every
+# external name a pod looks up (ndots:5) first resolves to the home IP, e.g.
+# acme-v02.api.letsencrypt.org.rutgerpronk.com, so cert-manager could not
+# reach Let's Encrypt.
+k3s_nameservers:
+  - 192.168.178.1
+k3s_resolv_conf: /etc/rancher/k3s/resolv.conf
 k3s_service: "{{ 'k3s' if k3s_role == 'server' else 'k3s-agent' }}"

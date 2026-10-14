@@ -1,4 +1,6 @@
 token: {{ k3s_token }}
+# Kubelet passes this to pods instead of the node's resolv.conf (no search domain).
+resolv-conf: {{ k3s_resolv_conf }}
 {% if k3s_role == 'server' %}
 write-kubeconfig-mode: "0600"
 # MetalLB hands out LoadBalancer IPs instead.
