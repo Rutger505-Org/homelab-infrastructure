@@ -400,6 +400,6 @@ One-time setup:
 - GitHub secret `ADGUARD_ADMIN_PASSWORD`: the AdGuard Home web UI password (plain text)
 - Tailnet policy: allow `tag:ci-homelab` to reach `192.168.178.205:80`
 - Tailscale OAuth client with the `dns` write scope; GitHub secrets
-  `TAILSCALE_DNS_OAUTH_CLIENT_ID` and `TAILSCALE_DNS_OAUTH_SECRET`
+  `TAILSCALE_DNS_OAUTH_CLIENT_ID` and `TAILSCALE_DNS_OAUTH_CLIENT_SECRET`
 - Tailnet policy: allow your own devices to reach `192.168.178.205:53` and
   `192.168.178.207:443`
