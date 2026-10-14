@@ -1,3 +1,10 @@
+{
+	# A reload waits for the old config's connections to close, by default
+	# forever: long-lived ones (websockets, idle HTTP/2) made reloads hang past
+	# systemd's timeout. Cut them off after 10s instead.
+	grace_period 10s
+}
+
 {{ caddy_domain }}, *.{{ caddy_domain }} {
 	# DNS-01, so nothing has to be reachable from the internet. Public resolvers
 	# for the propagation check, since the LAN DNS rewrites this domain.
