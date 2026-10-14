@@ -38,6 +38,20 @@
     mode: "0600"
   no_log: true
 
+# ssh reads id_ed25519.pub next to the private key; a stale .pub from an
+# earlier key makes signing fail ("contents do not match public").
+- name: Derive GitHub SSH public key
+  ansible.builtin.command:
+    argv: [ssh-keygen, -y, -f, "{{ openclaw_home }}/.ssh/id_ed25519"]
+  register: openclaw_ssh_public_key
+  changed_when: false
+
+- name: Write GitHub SSH public key
+  ansible.builtin.copy:
+    dest: "{{ openclaw_home }}/.ssh/id_ed25519.pub"
+    content: "{{ openclaw_ssh_public_key.stdout | trim }}\n"
+    mode: "0644"
+
 - name: Create kube directory
   ansible.builtin.file:
     path: "{{ openclaw_home }}/.kube"
