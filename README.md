@@ -9,7 +9,7 @@ Two Proxmox nodes running Debian VMs (OpenClaw: Arch), all as code. This README 
 - `ansible/playbook.yml`, `ansible/roles/<role>/`: configures each VM. Versions and settings in the role's `defaults/`.
 - `ansible/proxmox.yml`, `ansible/proxmox-inventory.yml`: the Proxmox nodes themselves (no-nag patch, tag colors), over root SSH. Separate inventory so OpenTofu never sees the nodes.
 - `dns/` (OpenTofu): every Cloudflare record of `rutgerpronk.com` and `rutgerpronk.nl`. Dashboard edits are drift and get reverted.
-- `internal-dns/` (OpenTofu): AdGuard rewrites (`*.homelab.rutgerpronk.com` → reverse proxy) and tailnet split DNS. Rewrites added in the web UI are left alone.
+- `internal-dns/` (OpenTofu): AdGuard rewrites (`homelab.rutgerpronk.com` and `*.homelab.rutgerpronk.com` → reverse proxy) and tailnet split DNS. Rewrites added in the web UI are left alone.
 - `.github/workflows/`: `deploy.yaml`, `dns.yaml`, `internal-dns.yaml`, and the secrets/vars they need. `.github/deploy-services.yaml` maps changed paths to services.
 
 OpenTofu state is in the R2 bucket `homelab-tofu-state` (one key per root), encrypted with `TOFU_STATE_PASSPHRASE` (Bitwarden). Not in k3s, so it survives the cluster.
@@ -28,7 +28,7 @@ OpenTofu state is in the R2 bucket `homelab-tofu-state` (one key per root), encr
 - Rebuild a VM: `prevent_destroy` in `proxmox/modules/vm/main.tf` fails the run; remove it on purpose.
 - Changing `ansible_host`: new cloud-init instance id, so new address and new SSH host keys on next boot.
 - SSH keys: `ssh_authorized_keys` in the inventory is the exact `authorized_keys` on every VM; keep `homelab-ci`. Per host extras: `ssh_extra_authorized_keys`.
-- New `<service>.homelab.rutgerpronk.com`: an entry in `caddy_routes`, no DNS change. Some apps must trust the proxy (`192.168.178.207`):
+- New `<service>.homelab.rutgerpronk.com`: an entry in `caddy_routes`, no DNS change; it also shows up on the `homelab.rutgerpronk.com` landing page. Some apps must trust the proxy (`192.168.178.207`):
   - Home Assistant: done by the role, an Ansible-marked `http:` block in `configuration.yaml` trusting the `reverse_proxy` group; put other `http:` options inside it
   - OpenClaw: URL in `gateway.controlUi.allowedOrigins`, proxy in `gateway.trustedProxies`
 - Upgrade a service: bump its `*_version` in the role defaults.

@@ -40,6 +40,7 @@
   loop:
     - { path: "/opt/caddy/{{ caddy_version }}", owner: root, mode: "0755" }
     - { path: /etc/caddy, owner: root, mode: "0750" }
+    - { path: /etc/caddy/site, owner: root, mode: "0750" }
     - { path: "{{ caddy_data_dir }}", owner: caddy, mode: "0750" }
 
 # One directory per version, so bumping caddy_version installs and switches to
@@ -80,6 +81,14 @@
     group: caddy
     mode: "0640"
   notify: Reload caddy
+
+- name: Write landing page
+  ansible.builtin.template:
+    src: index.html.j2
+    dest: /etc/caddy/site/index.html
+    owner: root
+    group: caddy
+    mode: "0640"
 
 - name: Write systemd unit
   ansible.builtin.template:

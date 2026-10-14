@@ -12,6 +12,12 @@ locals {
   adguard_dns = "192.168.178.205"
 }
 
+# The bare domain, for the landing page linking every service.
+resource "adguard_rewrite" "apex" {
+  domain = local.domain
+  answer = local.reverse_proxy
+}
+
 resource "adguard_rewrite" "wildcard" {
   domain = "*.${local.domain}"
   answer = local.reverse_proxy
