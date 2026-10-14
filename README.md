@@ -41,7 +41,7 @@ OpenTofu state is in the R2 bucket `homelab-tofu-state` (one key per root), encr
 - AdGuard Home: the config is seeded once, then owned by the web UI, except the `dhcp` settings. DHCP is never switched on by a deploy: turn the modem's DHCP off and enable it in the web UI by hand (a rebuilt VM starts with it off). If the VM is down, turn modem DHCP back on. The modem's IPv6 DNS field must be `2001:1c07:504:1d00::53`. Changing the password secret does not change a running instance.
 - Home Assistant: onboarding creates the owner; add the MQTT integration with broker `localhost`.
 - OpenClaw VM: run dev-env's `install.sh` by hand. `.env` is only written when missing, so keep `OPENCLAW_ENV` up to date. State outside the config repo (sessions, memory, channel credentials) is not backed up. Set `openclaw_gateway_enabled: false` before running a second Gateway with the same state, or both answer.
-- Grafana goes through Traefik as `grafana.rutgerpronk.com` and may redirect to that public name.
+- Grafana is LAN only: Caddy is its only route in, to its MetalLB address `.231`.
 - Proxmox no-nag: the run fails when a widget toolkit update breaks the patch. Tag style changes made in the UI get overwritten.
 
 ### k3s CA bundle
