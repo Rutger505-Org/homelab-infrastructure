@@ -8,4 +8,10 @@ k3s_token: "{{ lookup('ansible.builtin.env', 'K3S_TOKEN') }}"
 k3s_ca_bundle: "{{ lookup('ansible.builtin.env', 'K3S_CA_BUNDLE') }}"
 k3s_tls_dir: /var/lib/rancher/k3s/server/tls
 k3s_server_address: "{{ hostvars[groups['k3s_server'][0]].ansible_host }}"
+# MetalLB address of the Traefik LoadBalancer Service. Must be inside the
+# MetalLB pool (kubernetes-infrastructure 3-metallb-config, autoAssign off).
+k3s_traefik_ip: 192.168.178.230
+# Port clients reach HTTP/3 on, advertised in the Alt-Svc header.
+k3s_traefik_http3_port: 443
+k3s_manifests_dir: /var/lib/rancher/k3s/server/manifests
 k3s_service: "{{ 'k3s' if k3s_role == 'server' else 'k3s-agent' }}"
