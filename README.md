@@ -232,8 +232,8 @@ BLIND_ID=1 WIFI_SSID=... WIFI_PASSWORD=... MQTT_BROKER=192.168.178.215 \
 ### AdGuard Home
 
 `adguard-home` (`.205`, id 906, on `proxmox-prodesk`) runs AdGuard Home as the LAN DNS
-resolver with ad blocking. Only SSH, DNS (53 TCP/UDP) and the web UI on port 80 are
-reachable; nftables drops everything else.
+resolver and DHCP server, with ad blocking. Only SSH, DNS (53 TCP/UDP), DHCP (67 UDP) and
+the web UI on port 80 are reachable; nftables drops everything else.
 
 - Web UI: http://192.168.178.205, user `admin`, password in Bitwarden
 - Config: Ansible seeds `/var/lib/adguardhome/AdGuardHome.yaml` once (upstreams, admin
@@ -242,11 +242,15 @@ reachable; nftables drops everything else.
 - Password: the seed only takes a bcrypt hash, e.g. `htpasswd -nbBC 10 "" <password> | tr -d ':\n'`.
   Changing the secret does not change the password of a running instance.
 - Upgrade: bump `adguard_home_version`; the built-in updater is off
-- Clients only use it once the Ziggo modem hands it out as DNS server: set
-  `192.168.178.205` by hand in the modem's DHCP/LAN settings. AdGuard Home does not run
-  DHCP, the modem stays the only DHCP server. If the modem has no DNS field, set it per device
-- Single instance: when the VM is down, LAN clients lose DNS. Set the modem's DNS back to
-  automatic to fall back
+- DHCP: the Ziggo modem refuses a private address as DNS server, so AdGuard Home is the
+  LAN's DHCP server and hands out itself as DNS server. The modem's DHCP server must be
+  off; two DHCP servers on one LAN hand out conflicting leases. Pool `.20`-`.198`,
+  gateway `.1`, 24 h leases, clients resolve as `<hostname>.lan`. Ansible owns the
+  `dhcp` section of the config (`adguard_home_dhcp_*` in the role defaults) and writes it
+  back on every deploy, so change it there, not in the web UI. Static leases are set in
+  the web UI
+- Single instance: when the VM is down, LAN clients lose DNS and new devices get no
+  address. Turn the modem's DHCP server back on to fall back
 
 ### Reverse proxy
 
