@@ -246,7 +246,7 @@ the web UI on port 80 are reachable; nftables drops everything else.
 - Upgrade: bump `adguard_home_version`; the built-in updater is off
 - DHCP: the Ziggo modem refuses a private address as DNS server, so AdGuard Home is meant
   to be the LAN's DHCP server and hand out itself as DNS server. Ansible configures it
-  (pool `.20`-`.198`, gateway `.1`, 24 h leases, clients resolve as `<hostname>.lan`;
+  (pool `.20`-`.180`, gateway `.1`, 24 h leases, clients resolve as `<hostname>.lan`;
   `adguard_home_dhcp_*` in the role defaults) but never switches it on: a deploy must not
   start a second DHCP server next to the modem's. Switch it by hand, at the same time:
   modem DHCP off, then Settings → DHCP settings → Enable DHCP server in the web UI. A
