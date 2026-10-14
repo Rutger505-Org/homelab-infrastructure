@@ -13,7 +13,7 @@
 #
 # LAN addresses (192.168.178.x, static, outside the router's DHCP range):
 # - .199-.200: Proxmox nodes
-# - .201-.229: VMs, a VM keeps the address of the VM it replaced
+# - .201-.229: VMs
 # - .230-.250: MetalLB, Kubernetes LoadBalancer services
 # Changing ansible_host changes the VM's cloud-init network config; the VM
 # picks it up on its next boot.

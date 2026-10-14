@@ -1,7 +1,7 @@
 # Only used for the first install, OpenClaw updates itself after that.
 openclaw_version: latest
-# Leave off until the state (sessions, memory, credentials) is copied over from
-# the old VM, or two Gateways answer on the same channels.
+# Turned on per host. Keep it off while another Gateway runs with the same state
+# (sessions, memory, channel credentials), or both answer on the same channels.
 openclaw_gateway_enabled: false
 openclaw_gateway_port: 18789
 # Contents of ~/.openclaw/.env. Only written when missing: the sync adds new
