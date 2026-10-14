@@ -317,7 +317,7 @@ CI reaches the LAN through this router: when it is down, run locally.
 ### OpenClaw
 
 `openclaw` (`.210`, id 910) runs Arch from the Arch cloud image, with `openclaw` as
-login user. Ansible installs the packages and yay, enables lingering, writes the
+login user. Ansible installs the packages, enables lingering, writes the
 GitHub key and `~/.openclaw/.env`, sets up the openclaw-config checkout with its
 sync timer, clones dev-env and installs OpenClaw.
 
