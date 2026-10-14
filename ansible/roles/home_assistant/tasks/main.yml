@@ -179,9 +179,11 @@
 - name: Trust the reverse proxy
   ansible.builtin.copy:
     dest: "{{ home_assistant_data_dir }}/config/.storage/http"
-    content: "{{ current | combine({'data': {'stable': {'use_x_forwarded_for': true, 'trusted_proxies': proxies}}}, recursive=true) | to_nice_json(indent=2) }}\n"
+    content: "{{ current | combine({'data': {'stable': proxy}}, recursive=true) | to_nice_json(indent=2) }}\n"
     mode: "0600"
   vars:
     current: "{{ home_assistant_http.content | b64decode | from_json }}"
-    proxies: "{{ groups['reverse_proxy'] | map('extract', hostvars, 'ansible_host') | map('regex_replace', '$', '/32') | list }}"
+    proxy:
+      use_x_forwarded_for: true
+      trusted_proxies: "{{ groups['reverse_proxy'] | map('extract', hostvars, 'ansible_host') | map('regex_replace', '$', '/32') | list }}"
   notify: Restart Home Assistant
