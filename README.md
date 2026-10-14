@@ -288,6 +288,12 @@ disabled for MetalLB. Workloads come from
 kubernetes-infrastructure; PVCs (`local-path`) live on the root disk, so a rebuild
 loses them.
 
+Pods get DNS from `/etc/rancher/k3s/resolv.conf` (`resolv-conf`, `k3s_nameservers`),
+not the node's resolv.conf. The nodes carry `search rutgerpronk.com`, and with the public
+`*.rutgerpronk.com` wildcard every external lookup from a pod (`ndots:5`) first resolved
+to the home IP: cert-manager hit `acme-v02.api.letsencrypt.org.rutgerpronk.com` and never
+issued a certificate. Changing it only affects pods created afterwards.
+
 Traefik (packaged with k3s) is configured from here, not from kubernetes-infrastructure:
 the role writes a `HelmChartConfig` to `/var/lib/rancher/k3s/server/manifests/traefik-config.yaml`
 before k3s first starts. It enables HTTP/3 (UDP/443 next to TCP/443 on one Service) and pins

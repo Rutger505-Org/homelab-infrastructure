@@ -15,6 +15,18 @@
     state: directory
     mode: "0755"
 
+# Read by the kubelet only at pod creation: pods that already run keep their
+# old resolv.conf until they are recreated.
+- name: Write pod resolv.conf
+  ansible.builtin.copy:
+    dest: "{{ k3s_resolv_conf }}"
+    content: |
+      {% for server in k3s_nameservers %}
+      nameserver {{ server }}
+      {% endfor %}
+    mode: "0644"
+  notify: Restart k3s
+
 # The install script and k3s both read this, so the token never ends up in the
 # systemd unit or the process list.
 - name: Write k3s config
