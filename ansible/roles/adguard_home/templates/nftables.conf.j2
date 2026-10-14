@@ -15,5 +15,6 @@ table inet host_firewall {
     tcp dport 22 accept
     meta l4proto { tcp, udp } th dport 53 accept
     tcp dport {{ adguard_home_web_port }} accept
+    udp dport 67 accept
   }
 }

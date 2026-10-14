@@ -232,8 +232,8 @@ BLIND_ID=1 WIFI_SSID=... WIFI_PASSWORD=... MQTT_BROKER=192.168.178.215 \
 ### AdGuard Home
 
 `adguard-home` (`.205`, id 906, on `proxmox-prodesk`) runs AdGuard Home as the LAN DNS
-resolver with ad blocking. Only SSH, DNS (53 TCP/UDP) and the web UI on port 80 are
-reachable; nftables drops everything else.
+resolver and DHCP server, with ad blocking. Only SSH, DNS (53 TCP/UDP), DHCP (67 UDP) and
+the web UI on port 80 are reachable; nftables drops everything else.
 
 - Web UI: http://192.168.178.205, user `admin`, password in Bitwarden
 - Config: Ansible seeds `/var/lib/adguardhome/AdGuardHome.yaml` once (upstreams, admin
@@ -242,11 +242,16 @@ reachable; nftables drops everything else.
 - Password: the seed only takes a bcrypt hash, e.g. `htpasswd -nbBC 10 "" <password> | tr -d ':\n'`.
   Changing the secret does not change the password of a running instance.
 - Upgrade: bump `adguard_home_version`; the built-in updater is off
-- Clients only use it once the Ziggo modem hands it out as DNS server: set
-  `192.168.178.205` by hand in the modem's DHCP/LAN settings. AdGuard Home does not run
-  DHCP, the modem stays the only DHCP server. If the modem has no DNS field, set it per device
-- Single instance: when the VM is down, LAN clients lose DNS. Set the modem's DNS back to
-  automatic to fall back
+- DHCP: the Ziggo modem refuses a private address as DNS server, so AdGuard Home is meant
+  to be the LAN's DHCP server and hand out itself as DNS server. Ansible configures it
+  (pool `.20`-`.198`, gateway `.1`, 24 h leases, clients resolve as `<hostname>.lan`;
+  `adguard_home_dhcp_*` in the role defaults) but never switches it on: a deploy must not
+  start a second DHCP server next to the modem's. Switch it by hand, at the same time:
+  modem DHCP off, then Settings → DHCP settings → Enable DHCP server in the web UI. A
+  rebuilt VM starts with DHCP off again. Change the pool in the role defaults, not the web
+  UI, a deploy writes it back. Static leases are set in the web UI
+- Single instance: when the VM is down, LAN clients lose DNS and new devices get no
+  address. Turn the modem's DHCP server back on to fall back
 
 ### Reverse proxy
 

@@ -12,3 +12,14 @@ adguard_home_bootstrap_dns:
 adguard_home_admin_user: admin
 # bcrypt hash of the web UI password, e.g. from `htpasswd -nbBC 10 "" <password>`.
 adguard_home_admin_password_hash: "{{ lookup('ansible.builtin.env', 'ADGUARD_ADMIN_PASSWORD_HASH') }}"
+
+# DHCP for the LAN: the Ziggo modem refuses a private address as DNS server, so
+# AdGuard Home hands out the leases and itself as DNS server instead. Unlike the
+# rest of the config, Ansible owns the `dhcp` settings and writes them back on
+# every deploy, except the on/off switch: that stays in the web UI and defaults to
+# off, so a deploy never starts a second DHCP server next to the modem's. Turn it
+# on by hand while switching the modem's DHCP off. The pool stays below .199,
+# since .199-.250 are static (see inventory.yml).
+adguard_home_dhcp_range_start: 192.168.178.20
+adguard_home_dhcp_range_end: 192.168.178.198
+adguard_home_dhcp_lease_duration: 86400
