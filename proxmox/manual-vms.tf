@@ -4,16 +4,6 @@
 # The one exception is the node tag, which only changes metadata.
 locals {
   manual_vms = {
-    tailscale = {
-      name      = "Tailscale"
-      vm_id     = 102
-      node_name = "proxmox-lade"
-      cores     = 1
-      memory    = 512
-      disk_size = 15
-      mac       = "BC:24:11:E9:75:CA"
-      cdrom     = "none"
-    }
     openclaw = {
       name      = "OpenClaw"
       vm_id     = 103

@@ -23,12 +23,12 @@ Static, on 192.168.178.0/24, outside the modem's DHCP range. Gateway `.1`.
 The VM addresses are `ansible_host` in `ansible/inventory.yml`; keep this list in sync:
 
 - `.201` k3s-1 (server), `.202` k3s-2 (agent)
-- `.203` Tailscale subnet router (hand-built; the managed one is on `.213` until cutover)
 - `.205` AdGuard Home
 - `.206` OpenClaw (hand-built; the managed one is on `.210` until cutover)
+- `.213` Tailscale subnet router
 - `.214` SeaweedFS (`cdn.rutgerpronk.com`)
 - `.215` Home Assistant
-- Free: `.204`, `.207`-`.209`, `.211`, `.212`, `.216`-`.229`
+- Free: `.203`, `.204`, `.207`-`.209`, `.211`, `.212`, `.216`-`.229`
 
 Changing `ansible_host` changes the VM's cloud-init network config. Proxmox derives
 the cloud-init instance id from that config, so on the next boot cloud-init sees a new
@@ -43,10 +43,10 @@ cloud-init only setting up the login user, SSH keys and the QEMU guest agent.
 that touches them (see CI below).
 
 Managed this way: SeaweedFS, Home Assistant, AdGuard Home, the reverse proxy, k3s-1,
-k3s-2, and the replacements for the hand-built VMs (tailscale, openclaw). Until those
-are cut over (see below), the hand-built originals keep running.
+k3s-2, tailscale, and the replacement for the hand-built OpenClaw VM. Until that is
+cut over (see below), the hand-built original keeps running.
 
-The hand-built VMs (Tailscale, OpenClaw) are imported into the same
+The hand-built VM (OpenClaw) is imported into the same
 state by `proxmox/manual-vms.tf`, mirroring their live config. OpenTofu tracks them
 and guards them with `prevent_destroy`, but cannot rebuild them: their OS and
 services were set up by hand.
@@ -312,8 +312,7 @@ auto-approves the route for it. One-time setup:
 - create an OAuth client with the `auth_keys` write scope and `tag:homelab`,
   store its secret as `TAILSCALE_ROUTER_OAUTH_SECRET`
 
-Two routers for the same subnet fail over to each other, so it can run next to the
-old one. CI reaches the LAN through this router: when it is down, run locally.
+CI reaches the LAN through this router: when it is down, run locally.
 
 ### OpenClaw
 
@@ -341,7 +340,7 @@ The new VMs run next to the old ones, with their own ids and addresses. Per VM:
    addresses (`.201`/`.202`). The `KUBECONFIG` secret, `4-rbac` and the `tag:ci` grant
    keep working. Rerun the kubernetes-infrastructure deploys, restore the data,
    regenerate service account kubeconfigs
-2. Tailscale: check the new router shows the route as approved, then shut the old one down
+2. Tailscale (done): the old router (id 102, `.203`) is shut down and removed
 3. OpenClaw: stop the old Gateway, copy `~/.openclaw` over, set
    `openclaw_gateway_enabled: true`, update the monitoring target (`.206:18789`) and the
    `openclaw` record in `internal-dns/main.tf`
@@ -393,14 +392,6 @@ One-time setup:
 ## Hand-built VMs
 
 Replaced by the managed VMs above, kept until the cutover.
-
-### Tailscale
-
-1. Create the Tailscale VM (Debian). Enable the QEMU guest agent in the Proxmox panel, at creation or later under VM, Options, QEMU Guest Agent, Enable
-2. Create Bitwarden Tailscale username, password
-3. Configure authorized keys
-4. Configure 192.168.178.203 as static IP
-5. Log in remotely, install Tailscale, and log in
 
 ### Openclaw
 
