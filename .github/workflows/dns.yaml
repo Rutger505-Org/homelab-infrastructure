@@ -40,6 +40,7 @@ jobs:
       - name: Setup OpenTofu
         uses: opentofu/setup-opentofu@v1
         with:
+          # renovate: datasource=github-releases depName=opentofu/opentofu extractVersion=^v(?<version>.+)$
           tofu_version: 1.13.0
           tofu_wrapper: false
 

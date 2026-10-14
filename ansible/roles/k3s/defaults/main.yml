@@ -1,4 +1,5 @@
 # Bump to upgrade: the install script reruns when the installed version differs.
+# renovate: datasource=github-releases depName=k3s-io/k3s
 k3s_version: v1.34.3+k3s1
 # Shared secret agents join the server with. Set on the play: server or agent.
 k3s_token: "{{ lookup('ansible.builtin.env', 'K3S_TOKEN') }}"

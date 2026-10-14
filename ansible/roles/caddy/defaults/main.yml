@@ -1,5 +1,6 @@
 # Caddy with the Cloudflare DNS module, built by caddyserver.com's download
 # service. Building takes a few minutes, hence the long download timeout.
+# renovate: datasource=github-releases depName=caddyserver/caddy
 caddy_version: "v2.11.7"
 caddy_download_url: "https://caddyserver.com/api/download?os=linux&arch=amd64&p=github.com%2Fcaddy-dns%2Fcloudflare&version={{ caddy_version }}"
 caddy_data_dir: /var/lib/caddy

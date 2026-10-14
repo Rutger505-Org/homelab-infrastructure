@@ -84,7 +84,8 @@ jobs:
           oauth-client-id: ${{ secrets.TAILSCALE_CI_HOMELAB_OAUTH_CLIENT_ID }}
           oauth-secret: ${{ secrets.TAILSCALE_CI_HOMELAB_OAUTH_SECRET }}
           tags: tag:ci-homelab
-          version: latest
+          # renovate: datasource=github-releases depName=tailscale/tailscale extractVersion=^v(?<version>.+)$
+          version: 1.104.1
 
       - name: Load SSH key
         env:
@@ -97,6 +98,7 @@ jobs:
       - name: Setup OpenTofu
         uses: opentofu/setup-opentofu@v1
         with:
+          # renovate: datasource=github-releases depName=opentofu/opentofu extractVersion=^v(?<version>.+)$
           tofu_version: 1.13.0
           tofu_wrapper: false
 
@@ -152,7 +154,8 @@ jobs:
           oauth-client-id: ${{ secrets.TAILSCALE_CI_HOMELAB_OAUTH_CLIENT_ID }}
           oauth-secret: ${{ secrets.TAILSCALE_CI_HOMELAB_OAUTH_SECRET }}
           tags: tag:ci-homelab
-          version: latest
+          # renovate: datasource=github-releases depName=tailscale/tailscale extractVersion=^v(?<version>.+)$
+          version: 1.104.1
 
       - name: Load SSH key
         env:

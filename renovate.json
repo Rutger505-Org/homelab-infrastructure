@@ -1,0 +1,72 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":semanticCommits"
+  ],
+  "timezone": "Europe/Amsterdam",
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Versions annotated with a `# renovate:` comment on the line above",
+      "managerFilePatterns": [
+        "/^ansible/.+\\.ya?ml$/",
+        "/^\\.github/workflows/.+\\.ya?ml$/"
+      ],
+      "matchStrings": [
+        "#\\s*renovate:\\s*datasource=(?<datasource>\\S+)\\s+depName=(?<depName>\\S+)(\\s+extractVersion=(?<extractVersion>\\S+))?\\s*\\n\\s*[\\w-]+:\\s*\"?(?<currentValue>[^\"\\s]+)\"?"
+      ]
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Patches deploy on merge without review, once they are 3 days old and the PR plan/check passed",
+      "matchUpdateTypes": [
+        "patch",
+        "digest"
+      ],
+      "minimumReleaseAge": "3 days",
+      "automerge": true
+    },
+    {
+      "description": "GitHub Actions only run CI, so minor updates are safe to automerge too",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "matchUpdateTypes": [
+        "minor"
+      ],
+      "minimumReleaseAge": "3 days",
+      "automerge": true
+    },
+    {
+      "description": "Home Assistant: monthly releases with breaking changes, read the release notes",
+      "matchDepNames": [
+        "ghcr.io/home-assistant/home-assistant"
+      ],
+      "automerge": false
+    },
+    {
+      "description": "SeaweedFS holds data: always review",
+      "matchDepNames": [
+        "seaweedfs/seaweedfs"
+      ],
+      "automerge": false,
+      "prBodyNotes": [
+        "SeaweedFS holds the S3 data. Check the release notes and make sure there is a backup before merging."
+      ]
+    },
+    {
+      "description": "k3s: one minor at a time, matching kubernetes-infrastructure",
+      "matchDepNames": [
+        "k3s-io/k3s"
+      ],
+      "versioning": "regex:^v(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)\\+k3s(?<build>\\d+)$",
+      "separateMultipleMinor": true,
+      "automerge": false,
+      "prBodyNotes": [
+        "Kubernetes only supports upgrading one minor version at a time: merge the minor PRs in order. Check that the charts in kubernetes-infrastructure support the new version."
+      ]
+    }
+  ]
+}
