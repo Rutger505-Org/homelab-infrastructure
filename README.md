@@ -289,8 +289,10 @@ loses them.
 
 The cluster CAs come from `K3S_CA_BUNDLE` and are put in place before k3s first starts,
 so a rebuilt server signs with the same CAs: existing admin kubeconfigs keep working,
-at `https://192.168.178.201:6443`. Service account tokens do not survive a
-rebuild, they belong to objects in the old cluster; kubernetes-infrastructure recreates them.
+at `https://192.168.178.201:6443`, and so does the read-only kubeconfig from
+kubernetes-infrastructure `4-rbac` (a client certificate from the same client CA). Service
+account tokens do not survive a rebuild, they belong to objects in the old cluster;
+kubernetes-infrastructure recreates them.
 The secret holds the CA private keys, which give full admin access to the cluster.
 
 Export the CAs from the running server, for example to restore the secret. Pack them
