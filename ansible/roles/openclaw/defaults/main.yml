@@ -18,5 +18,4 @@ openclaw_packages:
   - bun
   - jq
   - gitleaks
-  - zsh
   - tmux

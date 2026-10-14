@@ -23,13 +23,6 @@
   register: openclaw_pacman
   changed_when: "'there is nothing to do' not in openclaw_pacman.stdout"
 
-# Cloud-init creates the user with bash; dev-env expects zsh as the login shell.
-- name: Set zsh as login shell
-  become: true
-  ansible.builtin.user:
-    name: "{{ ansible_user }}"
-    shell: /usr/bin/zsh
-
 # User services (Gateway, sync timer) keep running without a login session.
 - name: Enable lingering
   become: true
