@@ -29,7 +29,7 @@ OpenTofu state is in the R2 bucket `homelab-tofu-state` (one key per root), encr
 - Changing `ansible_host`: new cloud-init instance id, so new address and new SSH host keys on next boot.
 - SSH keys: `ssh_authorized_keys` in the inventory is the exact `authorized_keys` on every VM; keep `homelab-ci`. Per host extras: `ssh_extra_authorized_keys`.
 - New `<service>.homelab.rutgerpronk.com`: an entry in `caddy_routes`, no DNS change. Some apps must trust the proxy (`192.168.178.207`):
-  - Home Assistant: `http:` with `use_x_forwarded_for: true`, `trusted_proxies: [192.168.178.207]`
+  - Home Assistant: done by the role, an Ansible-marked `http:` block in `configuration.yaml` trusting the `reverse_proxy` group; put other `http:` options inside it
   - OpenClaw: URL in `gateway.controlUi.allowedOrigins`, proxy in `gateway.trustedProxies`
 - Upgrade a service: bump its `*_version` in the role defaults.
 - Use homelab names from a device: Tailscale with DNS and routes accepted (`tailscale up --accept-dns --accept-routes`).
