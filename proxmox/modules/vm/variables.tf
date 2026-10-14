@@ -68,6 +68,12 @@ variable "ipv4_gateway" {
   type        = string
 }
 
+variable "ipv6_address" {
+  description = "Static IPv6 address in CIDR notation, null for none"
+  type        = string
+  default     = null
+}
+
 variable "nameservers" {
   description = "DNS servers"
   type        = list(string)

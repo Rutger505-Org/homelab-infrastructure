@@ -63,6 +63,26 @@
       when: not k3s_ca_present.stat.exists
       changed_when: true
 
+# Must exist before k3s first starts, so Traefik is *installed* with HTTP/3.
+# Kubernetes merges Service and container ports by port number only, so a helm
+# upgrade that adds UDP/443 next to an existing TCP/443 folds the two together
+# and breaks HTTPS. A fresh install creates both ports correctly, and later
+# upgrades have nothing to add.
+- name: Configure the packaged Traefik
+  when: k3s_role == 'server'
+  block:
+    - name: Create manifests directory
+      ansible.builtin.file:
+        path: "{{ k3s_manifests_dir }}"
+        state: directory
+        mode: "0700"
+
+    - name: Write Traefik HelmChartConfig
+      ansible.builtin.template:
+        src: traefik-config.yaml.j2
+        dest: "{{ k3s_manifests_dir }}/traefik-config.yaml"
+        mode: "0600"
+
 - name: Read installed k3s version
   ansible.builtin.command: /usr/local/bin/k3s --version
   register: k3s_installed

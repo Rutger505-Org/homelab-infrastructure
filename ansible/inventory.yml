@@ -13,12 +13,19 @@
 #
 # LAN addresses (192.168.178.x, static, outside the router's DHCP range):
 # - .199-.200: Proxmox nodes
-# - .201-.229: VMs, a VM keeps the address of the VM it replaced
+# - .201-.229: VMs
 # - .230-.250: MetalLB, Kubernetes LoadBalancer services
 # Changing ansible_host changes the VM's cloud-init network config; the VM
 # picks it up on its next boot.
+#
+# IPv6: the modem only hands out addresses over DHCPv6, which the Debian VMs do
+# not use, so a host that needs a fixed IPv6 address sets ipv6_host: the
+# interface id in hex, appended to lan_ipv6_prefix (e.g. "53" =>
+# 2001:1c07:504:1d00::53). The prefix comes from Ziggo; if it ever changes,
+# update lan_ipv6_prefix and every address follows.
 all:
   vars:
+    lan_ipv6_prefix: 2001:1c07:504:1d00::/64
     ansible_user: debian
     # Exact contents of ~/.ssh/authorized_keys for ansible_user on every host
     # below; keys not listed here are removed on deploy. Also used by
@@ -97,6 +104,10 @@ all:
       hosts:
         adguard-home:
           ansible_host: 192.168.178.205
+          # 2001:1c07:504:1d00::53, set as IPv6 DNS server in the modem: it
+          # refuses a private IPv4 address, and IPv6 clients would otherwise
+          # bypass AdGuard Home.
+          ipv6_host: "53"
           vm_id: 906
           proxmox_node: proxmox-prodesk
           cores: 1

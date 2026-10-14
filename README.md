@@ -9,26 +9,26 @@ All VMs run Debian. The OpenClaw VM is the exception and runs Arch.
 1. Install Proxmox on both servers
 2. Initialize cluster
 3. Add one server as slave
-4. Upload the Debian server ISO
-5. Set static ip to 200. For other installs move to 199, 198, etc.
+4. Set static ip to 200. For other installs move to 199, 198, etc.
 
 ## Addresses
 
 Static, on 192.168.178.0/24, outside the modem's DHCP range. Gateway `.1`.
 
 - `.199`-`.200`: Proxmox nodes, `.200` proxmox-lade, `.199` proxmox-prodesk
-- `.201`-`.229`: VMs. A replacement VM takes over the address of the VM it replaces
+- `.201`-`.229`: VMs
 - `.230`-`.250`: MetalLB, Kubernetes LoadBalancer services (Traefik on `.230`)
 
 The VM addresses are `ansible_host` in `ansible/inventory.yml`; keep this list in sync:
 
 - `.201` k3s-1 (server), `.202` k3s-2 (agent)
-- `.205` AdGuard Home
+- `.205` AdGuard Home, also `2001:1c07:504:1d00::53` (`ipv6_host`)
+- `.207` Reverse proxy
 - `.210` OpenClaw
 - `.213` Tailscale subnet router
 - `.214` SeaweedFS (`cdn.rutgerpronk.com`)
 - `.215` Home Assistant
-- Free: `.203`, `.204`, `.206`-`.209`, `.211`, `.212`, `.216`-`.229`
+- Free: `.203`, `.204`, `.206`, `.208`, `.209`, `.211`, `.212`, `.216`-`.229`
 
 Changing `ansible_host` changes the VM's cloud-init network config. Proxmox derives
 the cloud-init instance id from that config, so on the next boot cloud-init sees a new
@@ -43,7 +43,7 @@ cloud-init only setting up the login user, SSH keys and the QEMU guest agent.
 that touches them (see CI below).
 
 Managed this way: SeaweedFS, Home Assistant, AdGuard Home, the reverse proxy, k3s-1,
-k3s-2, tailscale and OpenClaw. No hand-built VMs are left.
+k3s-2, tailscale and OpenClaw.
 
 State lives in Cloudflare R2, encrypted with a passphrase, not in k3s, so it stays
 readable when the cluster is gone.
@@ -172,7 +172,7 @@ are not listed. Keep the `homelab-ci` key, the run refuses a list without it.
 New VMs get the same list through cloud-init.
 
 A host can add keys of its own with `ssh_extra_authorized_keys` (host var, appended to
-the list), e.g. to let an old VM copy its state over to its replacement.
+the list).
 
 ### Adding a VM
 
@@ -199,7 +199,7 @@ the rest listens on localhost and nftables drops everything else.
 - Data: `/var/lib/seaweedfs` on its own 60 GB disk (scsi1), separate from the root disk
 - Buckets: `seaweedfs_buckets` in the role defaults, objects anonymously readable per file
 - Upgrade: bump `seaweedfs_version`
-- Not in use yet: the CDN still points at SeaweedFS in k3s until it is moved over
+- Served as `cdn.rutgerpronk.com` through Traefik, see kubernetes-infrastructure `5-seaweedfs`
 
 ### Home Assistant
 
@@ -245,6 +245,12 @@ the web UI on port 80 are reachable; nftables drops everything else.
   modem DHCP off, then Settings → DHCP settings → Enable DHCP server in the web UI. A
   rebuilt VM starts with DHCP off again. Change the pool in the role defaults, not the web
   UI, a deploy writes it back. Static leases are set in the web UI
+- IPv6: the modem's IPv6 DNS field must hold `2001:1c07:504:1d00::53`, otherwise IPv6
+  clients get the modem's DNS servers next to AdGuard Home and bypass it. The address is
+  static (`ipv6_host` in the inventory, prefix in `lan_ipv6_prefix`), because the modem
+  only hands out IPv6 addresses over DHCPv6. DNS over IPv6 is only accepted from the LAN
+  prefix and link-local addresses, since the address is publicly routable. If Ziggo
+  changes the prefix, update `lan_ipv6_prefix` and the modem field
 - Single instance: when the VM is down, LAN clients lose DNS and new devices get no
   address. Turn the modem's DHCP server back on to fall back
 
@@ -277,8 +283,8 @@ through a Cloudflare DNS-01 challenge, so nothing is exposed to the internet. On
 ### k3s
 
 `k3s-1` (`.201`, id 911) is the server, `k3s-2` (`.202`, id 912) joins it as an agent
-with `K3S_TOKEN`. Same version as the hand-built cluster (`k3s_version` in the role
-defaults, bump to upgrade), with ServiceLB disabled for MetalLB. Workloads come from
+with `K3S_TOKEN`. `k3s_version` in the role defaults, bump to upgrade. ServiceLB is
+disabled for MetalLB. Workloads come from
 kubernetes-infrastructure; PVCs (`local-path`) live on the root disk, so a rebuild
 loses them.
 
@@ -287,6 +293,14 @@ not the node's resolv.conf. The nodes carry `search rutgerpronk.com`, and with t
 `*.rutgerpronk.com` wildcard every external lookup from a pod (`ndots:5`) first resolved
 to the home IP: cert-manager hit `acme-v02.api.letsencrypt.org.rutgerpronk.com` and never
 issued a certificate. Changing it only affects pods created afterwards.
+
+Traefik (packaged with k3s) is configured from here, not from kubernetes-infrastructure:
+the role writes a `HelmChartConfig` to `/var/lib/rancher/k3s/server/manifests/traefik-config.yaml`
+before k3s first starts. It enables HTTP/3 (UDP/443 next to TCP/443 on one Service) and pins
+the MetalLB address `k3s_traefik_ip`. It has to be in place at install time: Kubernetes merges
+Service ports by port number only, so a helm *upgrade* that adds UDP/443 next to an existing
+TCP/443 folds the two together (`websecure` ended up targeting `websecure-http3`, HTTPS
+refused). k3s applies changes to the file on its own, no restart needed.
 
 The cluster CAs come from `K3S_CA_BUNDLE` and are put in place before k3s first starts,
 so a rebuilt server signs with the same CAs: existing admin kubeconfigs keep working,
@@ -297,8 +311,7 @@ kubernetes-infrastructure recreates them.
 The secret holds the CA private keys, which give full admin access to the cluster.
 
 Export the CAs from the running server, for example to restore the secret. Pack them
-first and upload in a second step, so a sudo password prompt cannot end up in the secret
-(the hand-built K3s-1 used user `k3s` instead of `debian`):
+first and upload in a second step, so a sudo password prompt cannot end up in the secret:
 
 ```bash
 ssh -t debian@192.168.178.201 'sudo sh -c "cd /var/lib/rancher/k3s/server/tls && tar -czf ~debian/k3s-ca.tar.gz *-ca.crt *-ca.key service*.key \$(ls -d etcd/*-ca.* 2>/dev/null) && chown debian ~debian/k3s-ca.tar.gz"'

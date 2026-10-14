@@ -1,5 +1,4 @@
-# Same as the hand-built cluster. Bump to upgrade: the install script reruns
-# when the installed version differs.
+# Bump to upgrade: the install script reruns when the installed version differs.
 k3s_version: v1.34.3+k3s1
 # Shared secret agents join the server with. Set on the play: server or agent.
 k3s_token: "{{ lookup('ansible.builtin.env', 'K3S_TOKEN') }}"
@@ -18,4 +17,11 @@ k3s_server_address: "{{ hostvars[groups['k3s_server'][0]].ansible_host }}"
 k3s_nameservers:
   - 192.168.178.1
 k3s_resolv_conf: /etc/rancher/k3s/resolv.conf
+
+# MetalLB address of the Traefik LoadBalancer Service. Must be inside the
+# MetalLB pool (kubernetes-infrastructure 3-metallb-config, autoAssign off).
+k3s_traefik_ip: 192.168.178.230
+# Port clients reach HTTP/3 on, advertised in the Alt-Svc header.
+k3s_traefik_http3_port: 443
+k3s_manifests_dir: /var/lib/rancher/k3s/server/manifests
 k3s_service: "{{ 'k3s' if k3s_role == 'server' else 'k3s-agent' }}"

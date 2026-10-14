@@ -95,6 +95,16 @@ resource "proxmox_virtual_environment_vm" "this" {
         address = var.ipv4_address
         gateway = var.ipv4_gateway
       }
+
+      # No gateway: the IPv6 default route comes from the modem's router
+      # advertisements, and LAN clients reach the address on-link anyway.
+      dynamic "ipv6" {
+        for_each = var.ipv6_address == null ? [] : [var.ipv6_address]
+
+        content {
+          address = ipv6.value
+        }
+      }
     }
 
     dns {

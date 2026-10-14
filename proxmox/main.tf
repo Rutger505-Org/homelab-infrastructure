@@ -58,6 +58,12 @@ module "vm" {
   ipv4_gateway = var.lan_gateway
   nameservers  = [var.lan_gateway]
 
+  # Only hosts with ipv6_host get a fixed IPv6 address (see inventory.yml).
+  ipv6_address = try(
+    "${cidrhost(local.inventory.all.vars.lan_ipv6_prefix, parseint(each.value.ipv6_host, 16))}/${split("/", local.inventory.all.vars.lan_ipv6_prefix)[1]}",
+    null
+  )
+
   username        = try(each.value.ansible_user, local.inventory.all.vars.ansible_user)
   ssh_public_keys = local.inventory.all.vars.ssh_authorized_keys
 }
