@@ -1,3 +1,4 @@
+# renovate: datasource=github-releases depName=seaweedfs/seaweedfs
 seaweedfs_version: "4.48"
 seaweedfs_data_dir: /var/lib/seaweedfs
 # Second disk (scsi1) from OpenTofu, so the data survives a rebuild of the root disk.

@@ -274,6 +274,19 @@ through a Cloudflare DNS-01 challenge, so nothing is exposed to the internet. On
 - Grafana goes through Traefik with `Host: grafana.rutgerpronk.com`, so it still redirects
   to that public name in places, until it gets its own internal route
 
+### Updates
+
+[Renovate](https://docs.renovatebot.com/) opens PRs for everything pinned in the repo
+(`renovate.json`). Versions it cannot find on its own, like the `*_version` vars in
+the Ansible role defaults and the tool versions in the workflows, carry a
+`# renovate: datasource=... depName=...` comment on the line above: annotate new ones
+the same way.
+
+- Patches (and minor GitHub Actions updates) automerge once they are 3 days old and the
+  PR's plan and check mode pass. Merging deploys them.
+- Home Assistant, SeaweedFS and k3s always wait for review. k3s gets one PR per minor
+  version: merge them in order.
+
 ### Known limits
 
 - cloud-init only runs on first boot; changes to it only reach new VMs (SSH keys are
