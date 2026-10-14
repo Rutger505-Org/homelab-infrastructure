@@ -7,8 +7,8 @@
 # Node memory: proxmox-lade has 16 GB, proxmox-prodesk 8 GB, and Proxmox
 # itself needs some of that. `memory` is a maximum, not a reservation, so the
 # sums below may go over as long as the VMs do not all use their maximum at
-# once. Hand-built VMs (proxmox/manual-vms.tf) count too until they are removed.
-# - proxmox-lade: 13.5 GB here, plus 6 GB hand-built
+# once.
+# - proxmox-lade: 13.5 GB here
 # - proxmox-prodesk: 6.5 GB here
 #
 # LAN addresses (192.168.178.x, static, outside the router's DHCP range):
@@ -60,8 +60,6 @@ all:
           memory: 4096
           disk_size: 20
           data_disk_size: 0
-    # openclaw replaces the hand-built OpenClaw VM (proxmox/manual-vms.tf),
-    # which keeps running next to it until cut over.
     tailscale_router:
       hosts:
         tailscale:
@@ -80,10 +78,6 @@ all:
           proxmox_node: proxmox-lade
           os: arch
           ansible_user: openclaw
-          # The hand-built OpenClaw VM's key, so it can move its own state
-          # here at cutover. Remove once the old VM is gone.
-          ssh_extra_authorized_keys:
-            - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK5DCkjLrATKWR+HrrelHjHsNXw9y8i4wdnoNsmHqlNn openclaw@openclaw
           cores: 4
           memory: 6144
           disk_size: 65

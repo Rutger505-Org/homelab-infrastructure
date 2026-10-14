@@ -24,12 +24,11 @@ The VM addresses are `ansible_host` in `ansible/inventory.yml`; keep this list i
 
 - `.201` k3s-1 (server), `.202` k3s-2 (agent)
 - `.205` AdGuard Home
-- `.206` OpenClaw, hand-built, Gateway stopped; delete with cutover step 4
 - `.210` OpenClaw
 - `.213` Tailscale subnet router
 - `.214` SeaweedFS (`cdn.rutgerpronk.com`)
 - `.215` Home Assistant
-- Free: `.203`, `.204`, `.207`-`.209`, `.211`, `.212`, `.216`-`.229`
+- Free: `.203`, `.204`, `.206`-`.209`, `.211`, `.212`, `.216`-`.229`
 
 Changing `ansible_host` changes the VM's cloud-init network config. Proxmox derives
 the cloud-init instance id from that config, so on the next boot cloud-init sees a new
@@ -44,13 +43,7 @@ cloud-init only setting up the login user, SSH keys and the QEMU guest agent.
 that touches them (see CI below).
 
 Managed this way: SeaweedFS, Home Assistant, AdGuard Home, the reverse proxy, k3s-1,
-k3s-2, tailscale and OpenClaw. The hand-built OpenClaw VM is cut over (see below) but
-not deleted yet.
-
-The hand-built VM (OpenClaw) is imported into the same
-state by `proxmox/manual-vms.tf`, mirroring their live config. OpenTofu tracks them
-and guards them with `prevent_destroy`, but cannot rebuild them: their OS and
-services were set up by hand.
+k3s-2, tailscale and OpenClaw. No hand-built VMs are left.
 
 State lives in Cloudflare R2, encrypted with a passphrase, not in k3s, so it stays
 readable when the cluster is gone.
@@ -179,8 +172,7 @@ are not listed. Keep the `homelab-ci` key, the run refuses a list without it.
 New VMs get the same list through cloud-init.
 
 A host can add keys of its own with `ssh_extra_authorized_keys` (host var, appended to
-the list). The managed `openclaw` VM uses it for the hand-built OpenClaw VM's key, so
-the old VM can copy its state over at cutover.
+the list), e.g. to let an old VM copy its state over to its replacement.
 
 ### Adding a VM
 
@@ -343,24 +335,6 @@ The Gateway service is only installed with `openclaw_gateway_enabled: true`. Tur
 before running a second Gateway with the same state: two Gateways with the same channel
 credentials both answer.
 
-### Cutover from the hand-built VMs
-
-The new VMs run next to the old ones, with their own ids and addresses. Per VM:
-
-1. k3s (done): back up the PVCs, shut the old VMs down, then move k3s-1/k3s-2 to their
-   addresses (`.201`/`.202`). The `KUBECONFIG` secret, `4-rbac` and the `tag:ci` grant
-   keep working. Rerun the kubernetes-infrastructure deploys, restore the data,
-   regenerate service account kubeconfigs
-2. Tailscale (done): the old router (id 102, `.203`) is shut down and removed
-3. OpenClaw (done): the old Gateway is stopped and disabled, the home directory
-   (`~/.openclaw`, `~/Source`, ...) copied over, `openclaw_gateway_enabled: true`, the
-   `openclaw` Caddy route and the kubernetes-infrastructure monitoring target point at `.210`
-4. Remove the old VM from `proxmox/manual-vms.tf` with a `removed` block
-   (`lifecycle { destroy = false }`), then delete it in Proxmox. Already deleted in
-   Proxmox (as K3s-1/K3s-2 were): delete its entry in `manual-vms.tf` before the next
-   deploy. The refresh drops it from state; left in, the next apply would create an
-   empty VM with its id
-
 ## DNS as code
 
 `dns/` (OpenTofu) manages every record in the Cloudflare zones `rutgerpronk.com` and
@@ -399,15 +373,3 @@ AdGuard Home as DNS server; new services only need a route there, not a DNS chan
 One-time setup:
 - GitHub secret `ADGUARD_ADMIN_PASSWORD`: the AdGuard Home web UI password (plain text)
 - Tailnet policy: allow `tag:ci-homelab` to reach `192.168.178.205:80`
-
-## Hand-built VMs
-
-Replaced by the managed VMs above, kept until the cutover.
-
-### Openclaw
-
-1. Create the VM (Arch). Enable the QEMU guest agent in the Proxmox panel, at creation or later under VM, Options, QEMU Guest Agent, Enable
-2. Create Bitwarden entries for the password
-3. Configure authorized keys
-4. Configure 206 as static IP address
-5. Install openclaw
