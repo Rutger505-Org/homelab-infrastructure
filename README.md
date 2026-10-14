@@ -175,6 +175,10 @@ key there and merge; the deploy rewrites the file on every VM and removes keys t
 are not listed. Keep the `homelab-ci` key, the run refuses a list without it.
 New VMs get the same list through cloud-init.
 
+A host can add keys of its own with `ssh_extra_authorized_keys` (host var, appended to
+the list). The managed `openclaw` VM uses it for the hand-built OpenClaw VM's key, so
+the old VM can copy its state over at cutover.
+
 ### Adding a VM
 
 Add a group and host to `ansible/inventory.yml` with `ansible_host`, `vm_id`,
