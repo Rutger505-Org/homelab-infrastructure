@@ -25,7 +25,7 @@ concurrency:
 
 jobs:
   internal-dns:
-    name: AdGuard Home rewrites
+    name: AdGuard Home rewrites and tailnet split DNS
     runs-on: ubuntu-latest
     if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
 
@@ -35,6 +35,8 @@ jobs:
       AWS_ENDPOINT_URL_S3: ${{ vars.R2_ENDPOINT }}
       TF_VAR_state_passphrase: ${{ secrets.TOFU_STATE_PASSPHRASE }}
       ADGUARD_PASSWORD: ${{ secrets.ADGUARD_ADMIN_PASSWORD }}
+      TAILSCALE_OAUTH_CLIENT_ID: ${{ secrets.TAILSCALE_DNS_OAUTH_CLIENT_ID }}
+      TAILSCALE_OAUTH_CLIENT_SECRET: ${{ secrets.TAILSCALE_DNS_OAUTH_SECRET }}
 
     defaults:
       run:
