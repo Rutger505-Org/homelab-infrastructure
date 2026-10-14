@@ -29,7 +29,7 @@ OpenTofu state is in the R2 bucket `homelab-tofu-state` (one key per root), encr
 - Changing `ansible_host`: new cloud-init instance id, so new address and new SSH host keys on next boot.
 - SSH keys: `ssh_authorized_keys` in the inventory is the exact `authorized_keys` on every VM; keep `homelab-ci`. Per host extras: `ssh_extra_authorized_keys`.
 - New `<service>.homelab.rutgerpronk.com`: an entry in `caddy_routes`, no DNS change; it also shows up on the `homelab.rutgerpronk.com` landing page. Some apps must trust the proxy (`192.168.178.207`):
-  - Home Assistant: in the UI (since 2026.8 YAML `http:` is ignored), see Manual below
+  - Home Assistant: done by the role, in the confirmed (`stable`) slot of `.storage/http` (YAML `http:` is ignored since 2026.8); from the `reverse_proxy` group
   - OpenClaw: URL in `gateway.controlUi.allowedOrigins`, proxy in `gateway.trustedProxies`
 - Upgrade a service: bump its `*_version` in the role defaults.
 - Use homelab names from a device: Tailscale with DNS and routes accepted (`tailscale up --accept-dns --accept-routes`).
@@ -39,7 +39,7 @@ OpenTofu state is in the R2 bucket `homelab-tofu-state` (one key per root), encr
 - **No backups** (no vzdump/PBS). k3s PVCs live on the root disk and are lost on rebuild.
 - cloud-init only runs on first boot; changes reach new VMs only (SSH keys excepted).
 - AdGuard Home: the config is seeded once, then owned by the web UI, except the `dhcp` settings. DHCP is never switched on by a deploy: turn the modem's DHCP off and enable it in the web UI by hand (a rebuilt VM starts with it off). If the VM is down, turn modem DHCP back on. The modem's IPv6 DNS field must be `2001:1c07:504:1d00::53`. Changing the password secret does not change a running instance.
-- Home Assistant: onboarding creates the owner; add the MQTT integration with broker `localhost`. For the reverse proxy: Settings > System > Network > HTTP server, turn on **Trust X-Forwarded-For**, **Trusted proxies** `192.168.178.207`, save, then confirm within 5 minutes after the restart (open `http://192.168.178.215:8123` for that, the proxied URL gives 400 until then).
+- Home Assistant: onboarding creates the owner; add the MQTT integration with broker `localhost`. Proxy trust in the UI (HTTP server) gets overwritten by the role; other HTTP server settings stay. The role fails on an unknown `.storage/http` version after an HA upgrade: check the format, bump the expected version.
 - OpenClaw VM: run dev-env's `install.sh` by hand. `.env` is only written when missing, so keep `OPENCLAW_ENV` up to date. State outside the config repo (sessions, memory, channel credentials) is not backed up. Set `openclaw_gateway_enabled: false` before running a second Gateway with the same state, or both answer.
 - Grafana is LAN only: Caddy is its only route in, to its MetalLB address `.231`.
 - Proxmox no-nag: the run fails when a widget toolkit update breaks the patch. Tag style changes made in the UI get overwritten.

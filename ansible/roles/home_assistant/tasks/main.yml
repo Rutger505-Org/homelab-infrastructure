@@ -152,10 +152,10 @@
   register: home_assistant_up
   changed_when: home_assistant_up.stderr is search('Creat|Recreat|Pull')
 
-# Home Assistant writes its default configuration.yaml on first start.
+# Written by Home Assistant on first start, after configuration.yaml.
 - name: Wait for Home Assistant configuration
   ansible.builtin.wait_for:
-    path: "{{ home_assistant_data_dir }}/config/configuration.yaml"
+    path: "{{ home_assistant_data_dir }}/config/.storage/http"
     timeout: 300
 
 # Since 2026.8 the http settings (reverse proxy trust) live in the UI. A YAML
@@ -167,4 +167,23 @@
     path: "{{ home_assistant_data_dir }}/config/configuration.yaml"
     marker: "# {mark} MANAGED BY ANSIBLE (homelab-infrastructure, role home_assistant)"
     state: absent
+  notify: Restart Home Assistant
+
+# Since 2026.8 the http settings live in .storage/http. UI and YAML changes are
+# a trial that reverts unless confirmed in the UI, so set the confirmed one.
+- name: Read the HTTP settings
+  ansible.builtin.slurp:
+    src: "{{ home_assistant_data_dir }}/config/.storage/http"
+  register: home_assistant_http
+
+- name: Trust the reverse proxy
+  ansible.builtin.copy:
+    dest: "{{ home_assistant_data_dir }}/config/.storage/http"
+    content: "{{ current | combine({'data': {'stable': proxy}}, recursive=true) | to_nice_json(indent=2) }}\n"
+    mode: "0600"
+  vars:
+    current: "{{ home_assistant_http.content | b64decode | from_json }}"
+    proxy:
+      use_x_forwarded_for: true
+      trusted_proxies: "{{ groups['reverse_proxy'] | map('extract', hostvars, 'ansible_host') | map('regex_replace', '$', '/32') | list }}"
   notify: Restart Home Assistant
