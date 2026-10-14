@@ -9,6 +9,9 @@ openclaw_gateway_port: 18789
 openclaw_env: "{{ lookup('ansible.builtin.env', 'OPENCLAW_ENV') }}"
 # GitHub key of the VM: clones and pushes dev-env and openclaw-config.
 openclaw_ssh_private_key: "{{ lookup('ansible.builtin.env', 'OPENCLAW_SSH_PRIVATE_KEY') }}"
+# Read-only kubeconfig from kubernetes-infrastructure 4-rbac. A client
+# certificate, so it survives k3s rebuilds.
+openclaw_readonly_kubeconfig: "{{ lookup('ansible.builtin.env', 'OPENCLAW_READONLY_KUBECONFIG') }}"
 openclaw_packages:
   - base-devel
   - git

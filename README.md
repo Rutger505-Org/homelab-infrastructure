@@ -91,6 +91,7 @@ Secrets:
 - `TAILSCALE_ROUTER_OAUTH_SECRET`: OAuth client secret for the subnet router, see Tailscale router
 - `OPENCLAW_ENV`: contents of `~/.openclaw/.env` on the OpenClaw VM
 - `OPENCLAW_SSH_PRIVATE_KEY`: SSH key of the OpenClaw VM, with access to `Rutger505/dev-env` and `Rutger505/openclaw-config`
+- `OPENCLAW_READONLY_KUBECONFIG`: the read-only kubeconfig, see kubernetes-infrastructure `4-rbac`
 - `MQTT_USERNAME`, `MQTT_PASSWORD`: Mosquitto login on the Home Assistant VM
 - `ADGUARD_ADMIN_PASSWORD_HASH`: bcrypt hash of the AdGuard Home web UI password
 - `ADGUARD_ADMIN_PASSWORD`: the same password in plain text, for `internal-dns/`
@@ -117,6 +118,7 @@ export SEAWEEDFS_ADMIN_ACCESS_KEY=<access key>
 export SEAWEEDFS_ADMIN_SECRET_KEY=<secret key>
 export K3S_TOKEN=<token> TAILSCALE_ROUTER_OAUTH_SECRET=<secret>
 export OPENCLAW_ENV="$(cat .env)" OPENCLAW_SSH_PRIVATE_KEY="$(cat id_ed25519)"
+export OPENCLAW_READONLY_KUBECONFIG="$(cat readonly.kubeconfig)"
 export MQTT_USERNAME=<mqtt user>
 export MQTT_PASSWORD=<mqtt password>
 export ADGUARD_ADMIN_PASSWORD_HASH='<bcrypt hash>'
@@ -325,8 +327,8 @@ CI reaches the LAN through this router: when it is down, run locally.
 
 `openclaw` (`.210`, id 910) runs Arch from the Arch cloud image, with `openclaw` as
 login user. Ansible installs the packages, enables lingering, writes the
-GitHub key and `~/.openclaw/.env`, sets up the openclaw-config checkout with its
-sync timer, clones dev-env and installs OpenClaw.
+GitHub key, `~/.openclaw/.env` and `~/.kube/readonly.kubeconfig`, sets up the
+openclaw-config checkout with its sync timer, clones dev-env and installs OpenClaw.
 
 Not automated:
 

@@ -3,7 +3,8 @@
     that:
       - openclaw_env | length > 0
       - openclaw_ssh_private_key | length > 0
-    fail_msg: Set OPENCLAW_ENV and OPENCLAW_SSH_PRIVATE_KEY.
+      - openclaw_readonly_kubeconfig | length > 0
+    fail_msg: Set OPENCLAW_ENV, OPENCLAW_SSH_PRIVATE_KEY and OPENCLAW_READONLY_KUBECONFIG.
     quiet: true
   no_log: true
 
@@ -34,6 +35,19 @@
   ansible.builtin.copy:
     dest: "{{ openclaw_home }}/.ssh/id_ed25519"
     content: "{{ openclaw_ssh_private_key | trim }}\n"
+    mode: "0600"
+  no_log: true
+
+- name: Create kube directory
+  ansible.builtin.file:
+    path: "{{ openclaw_home }}/.kube"
+    state: directory
+    mode: "0700"
+
+- name: Write read-only kubeconfig
+  ansible.builtin.copy:
+    dest: "{{ openclaw_home }}/.kube/readonly.kubeconfig"
+    content: "{{ openclaw_readonly_kubeconfig | trim }}\n"
     mode: "0600"
   no_log: true
 
