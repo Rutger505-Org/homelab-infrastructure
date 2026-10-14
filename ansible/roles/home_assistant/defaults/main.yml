@@ -6,9 +6,5 @@ home_assistant_data_dir: /srv/home-assistant
 # messages survive a rebuild of the root disk.
 home_assistant_data_device: /dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi1
 home_assistant_compose_dir: /etc/home-assistant
-home_assistant_http_store: "{{ home_assistant_data_dir }}/config/.storage/http"
-# Allowed to set X-Forwarded-For, in HA's stored form (str of an ip_network,
-# so IPv4 hosts get /32).
-home_assistant_trusted_proxies: "{{ groups['reverse_proxy'] | map('extract', hostvars, 'ansible_host') | map('regex_replace', '$', '/32') | list }}"
 home_assistant_mqtt_username: "{{ lookup('ansible.builtin.env', 'MQTT_USERNAME') }}"
 home_assistant_mqtt_password: "{{ lookup('ansible.builtin.env', 'MQTT_PASSWORD') }}"

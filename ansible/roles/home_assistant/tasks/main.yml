@@ -152,10 +152,10 @@
   register: home_assistant_up
   changed_when: home_assistant_up.stderr is search('Creat|Recreat|Pull')
 
-# Home Assistant writes its default configuration.yaml on first start.
+# Written by Home Assistant on first start, after configuration.yaml.
 - name: Wait for Home Assistant configuration
   ansible.builtin.wait_for:
-    path: "{{ home_assistant_data_dir }}/config/configuration.yaml"
+    path: "{{ home_assistant_data_dir }}/config/.storage/http"
     timeout: 300
 
 # Since 2026.8 the http settings (reverse proxy trust) live in the UI. A YAML
@@ -169,59 +169,19 @@
     state: absent
   notify: Restart Home Assistant
 
-# Since 2026.8 the http settings live in .storage/http, written by the UI.
-# Changes made there are a trial ("pending") that reverts unless confirmed in
-# the UI within 5 minutes, so set the confirmed ("stable") config directly
-# instead. HA writes the file on its first start.
-- name: Wait for the HTTP config store
-  ansible.builtin.wait_for:
-    path: "{{ home_assistant_http_store }}"
-    timeout: 300
-
-- name: Read the HTTP config store
+# Since 2026.8 the http settings live in .storage/http. UI and YAML changes are
+# a trial that reverts unless confirmed in the UI, so set the confirmed one.
+- name: Read the HTTP settings
   ansible.builtin.slurp:
-    src: "{{ home_assistant_http_store }}"
-  register: home_assistant_http_store_raw
+    src: "{{ home_assistant_data_dir }}/config/.storage/http"
+  register: home_assistant_http
 
-- name: Compute the HTTP config store
-  ansible.builtin.set_fact:
-    home_assistant_http_store_current: "{{ _current }}"
-    home_assistant_http_store_wanted: >-
-      {{ _current | combine({'data': {'stable': {
-           'use_x_forwarded_for': true,
-           'trusted_proxies': home_assistant_trusted_proxies
-         }}}, recursive=true) }}
-  vars:
-    _current: "{{ home_assistant_http_store_raw.content | b64decode | from_json }}"
-
-# Internal HA format: refuse to touch a version this role was not written for.
-# On a failure here, check the new format and bump the expected version.
-- name: Check the HTTP config store version
-  ansible.builtin.assert:
-    that:
-      - home_assistant_http_store_current.version == 2
-      - home_assistant_http_store_current.minor_version == 2
-    fail_msg: >-
-      .storage/http is version {{ home_assistant_http_store_current.version }}.{{ home_assistant_http_store_current.minor_version }},
-      this role only knows 2.2.
-    quiet: true
-
-# HA only reads the store at start and rewrites it on changes, so stop it
-# around the write.
 - name: Trust the reverse proxy
-  when: home_assistant_http_store_wanted != home_assistant_http_store_current
-  block:
-    - name: Stop Home Assistant
-      ansible.builtin.command: docker compose --project-directory {{ home_assistant_compose_dir }} stop home-assistant
-      changed_when: true
-
-    - name: Write the HTTP config store
-      ansible.builtin.copy:
-        dest: "{{ home_assistant_http_store }}"
-        content: "{{ home_assistant_http_store_wanted | to_nice_json(indent=2) }}\n"
-        mode: "0600"
-
-  always:
-    - name: Start Home Assistant
-      ansible.builtin.command: docker compose --project-directory {{ home_assistant_compose_dir }} start home-assistant
-      changed_when: true
+  ansible.builtin.copy:
+    dest: "{{ home_assistant_data_dir }}/config/.storage/http"
+    content: "{{ current | combine({'data': {'stable': {'use_x_forwarded_for': true, 'trusted_proxies': proxies}}}, recursive=true) | to_nice_json(indent=2) }}\n"
+    mode: "0600"
+  vars:
+    current: "{{ home_assistant_http.content | b64decode | from_json }}"
+    proxies: "{{ groups['reverse_proxy'] | map('extract', hostvars, 'ansible_host') | map('regex_replace', '$', '/32') | list }}"
+  notify: Restart Home Assistant

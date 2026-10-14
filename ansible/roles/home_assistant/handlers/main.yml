@@ -12,7 +12,7 @@
   ansible.builtin.command: docker compose --project-directory {{ home_assistant_compose_dir }} restart mosquitto
   changed_when: true
 
-# configuration.yaml is only read at start.
+# configuration.yaml and .storage are only read at start.
 - name: Restart Home Assistant
   ansible.builtin.command: docker compose --project-directory {{ home_assistant_compose_dir }} restart home-assistant
   changed_when: true
