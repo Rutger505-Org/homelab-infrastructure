@@ -8,7 +8,7 @@
 # itself needs some of that. `memory` is a maximum, not a reservation, so the
 # sums below may go over as long as the VMs do not all use their maximum at
 # once. Hand-built VMs (proxmox/manual-vms.tf) count too until they are removed.
-# - proxmox-lade: 13.5 GB here, plus 6.5 GB hand-built
+# - proxmox-lade: 13.5 GB here, plus 6 GB hand-built
 # - proxmox-prodesk: 6.5 GB here
 #
 # LAN addresses (192.168.178.x, static, outside the router's DHCP range):
@@ -60,8 +60,8 @@ all:
           memory: 4096
           disk_size: 20
           data_disk_size: 0
-    # tailscale and openclaw replace the hand-built Tailscale and OpenClaw VMs
-    # (proxmox/manual-vms.tf), which keep running next to them until cut over.
+    # openclaw replaces the hand-built OpenClaw VM (proxmox/manual-vms.tf),
+    # which keeps running next to it until cut over.
     tailscale_router:
       hosts:
         tailscale:
