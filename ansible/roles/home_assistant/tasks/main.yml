@@ -152,24 +152,19 @@
   register: home_assistant_up
   changed_when: home_assistant_up.stderr is search('Creat|Recreat|Pull')
 
-# Home Assistant writes its default configuration.yaml on first start; only add
-# to it afterwards, so the defaults (default_config, automations, ...) stay.
+# Home Assistant writes its default configuration.yaml on first start.
 - name: Wait for Home Assistant configuration
   ansible.builtin.wait_for:
     path: "{{ home_assistant_data_dir }}/config/configuration.yaml"
     timeout: 300
 
-# Without this Home Assistant answers 400 to every request through the reverse
-# proxy (home-assistant.homelab.rutgerpronk.com), since it sends X-Forwarded-For.
-- name: Trust the reverse proxy
+# Since 2026.8 the http settings (reverse proxy trust) live in the UI. A YAML
+# http: block added after the first start is ignored and only raises a repair
+# issue, so remove the one earlier versions of this role wrote. Can go once it
+# ran everywhere.
+- name: Remove the ignored http block
   ansible.builtin.blockinfile:
     path: "{{ home_assistant_data_dir }}/config/configuration.yaml"
     marker: "# {mark} MANAGED BY ANSIBLE (homelab-infrastructure, role home_assistant)"
-    block: |
-      http:
-        use_x_forwarded_for: true
-        trusted_proxies:
-      {% for host in groups['reverse_proxy'] %}
-          - {{ hostvars[host].ansible_host }}
-      {% endfor %}
+    state: absent
   notify: Restart Home Assistant
