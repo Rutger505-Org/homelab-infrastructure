@@ -13,7 +13,11 @@ table inet host_firewall {
     meta l4proto { icmp, ipv6-icmp } accept
 
     tcp dport 22 accept
-    meta l4proto { tcp, udp } th dport 53 accept
+    # DNS only from the LAN. Over IPv6 the address is public, and an open
+    # resolver gets abused for amplification attacks as soon as the modem's
+    # firewall lets anything through. IPv4 is behind the modem's NAT.
+    meta nfproto ipv4 meta l4proto { tcp, udp } th dport 53 accept
+    meta l4proto { tcp, udp } th dport 53 ip6 saddr { fe80::/10, {{ lan_ipv6_prefix }} } accept
     tcp dport {{ adguard_home_web_port }} accept
     udp dport 67 accept
   }

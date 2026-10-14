@@ -22,7 +22,7 @@ Static, on 192.168.178.0/24, outside the modem's DHCP range. Gateway `.1`.
 The VM addresses are `ansible_host` in `ansible/inventory.yml`; keep this list in sync:
 
 - `.201` k3s-1 (server), `.202` k3s-2 (agent)
-- `.205` AdGuard Home
+- `.205` AdGuard Home, also `2001:1c07:504:1d00::53` (`ipv6_host`)
 - `.207` Reverse proxy
 - `.210` OpenClaw
 - `.213` Tailscale subnet router
@@ -245,6 +245,12 @@ the web UI on port 80 are reachable; nftables drops everything else.
   modem DHCP off, then Settings → DHCP settings → Enable DHCP server in the web UI. A
   rebuilt VM starts with DHCP off again. Change the pool in the role defaults, not the web
   UI, a deploy writes it back. Static leases are set in the web UI
+- IPv6: the modem's IPv6 DNS field must hold `2001:1c07:504:1d00::53`, otherwise IPv6
+  clients get the modem's DNS servers next to AdGuard Home and bypass it. The address is
+  static (`ipv6_host` in the inventory, prefix in `lan_ipv6_prefix`), because the modem
+  only hands out IPv6 addresses over DHCPv6. DNS over IPv6 is only accepted from the LAN
+  prefix and link-local addresses, since the address is publicly routable. If Ziggo
+  changes the prefix, update `lan_ipv6_prefix` and the modem field
 - Single instance: when the VM is down, LAN clients lose DNS and new devices get no
   address. Turn the modem's DHCP server back on to fall back
 
