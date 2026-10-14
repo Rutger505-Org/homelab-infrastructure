@@ -1,5 +1,4 @@
-# Same as the hand-built cluster. Bump to upgrade: the install script reruns
-# when the installed version differs.
+# Bump to upgrade: the install script reruns when the installed version differs.
 k3s_version: v1.34.3+k3s1
 # Shared secret agents join the server with. Set on the play: server or agent.
 k3s_token: "{{ lookup('ansible.builtin.env', 'K3S_TOKEN') }}"
