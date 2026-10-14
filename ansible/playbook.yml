@@ -6,9 +6,32 @@
       ansible.builtin.wait_for_connection:
         timeout: 300
 
-    - name: Wait for cloud-init to finish
-      ansible.builtin.command: cloud-init status --wait
-      changed_when: false
+    # `cloud-init status --wait` never returns when cloud-init hangs, which
+    # stalled deploys for hours. 15 minutes leaves room for the full package
+    # upgrade on Arch.
+    - name: Wait for cloud-init, explain a hang
+      block:
+        - name: Wait for cloud-init to finish
+          ansible.builtin.command: timeout 900 cloud-init status --wait
+          changed_when: false
+
+      rescue:
+        - name: Read cloud-init status
+          ansible.builtin.shell: |
+            cloud-init status --long
+            echo
+            sudo tail -n 30 /var/log/cloud-init-output.log
+          register: cloud_init_debug
+          changed_when: false
+          failed_when: false
+
+        - name: Report the stuck cloud-init
+          ansible.builtin.fail:
+            msg: |
+              {{ 'cloud-init did not finish within 15 minutes' if cloud_init_rc | int == 124 else 'cloud-init failed (exit code ' ~ cloud_init_rc ~ ')' }}.
+              {{ cloud_init_debug.stdout | default('') }}
+          vars:
+            cloud_init_rc: "{{ ansible_failed_result.rc | default('unknown') }}"
 
 - name: Manage SSH keys
   hosts: all
