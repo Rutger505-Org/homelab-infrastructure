@@ -381,9 +381,16 @@ tofu -chdir=dns plan
 
 ## Internal DNS
 
-`internal-dns/` (OpenTofu, `gmichels/adguard` provider) manages DNS rewrites in AdGuard Home.
+`internal-dns/` (OpenTofu, `gmichels/adguard` and `tailscale/tailscale` providers) manages
+DNS rewrites in AdGuard Home and the tailnet's split DNS.
 `*.homelab.rutgerpronk.com` resolves to the reverse proxy for every client that uses
 AdGuard Home as DNS server; new services only need a route there, not a DNS change.
+
+Tailnet devices resolve `homelab.rutgerpronk.com` and its subdomains through AdGuard Home
+(split DNS), all other names through their own DNS. Away from home the query and the
+connection to the reverse proxy go through the subnet router, so the homelab names work
+anywhere. On a device: Tailscale on, with "Use Tailscale DNS" and subnet routes accepted
+(Linux: `tailscale up --accept-dns --accept-routes`).
 
 - Applied on every push to `internal-dns/` and after every successful homelab deploy, so a
   rebuilt AdGuard VM gets its rewrites back. Rewrites added by hand in the web UI are left alone
@@ -392,3 +399,7 @@ AdGuard Home as DNS server; new services only need a route there, not a DNS chan
 One-time setup:
 - GitHub secret `ADGUARD_ADMIN_PASSWORD`: the AdGuard Home web UI password (plain text)
 - Tailnet policy: allow `tag:ci-homelab` to reach `192.168.178.205:80`
+- Tailscale OAuth client with the `dns` write scope; GitHub secrets
+  `TAILSCALE_DNS_OAUTH_CLIENT_ID` and `TAILSCALE_DNS_OAUTH_SECRET`
+- Tailnet policy: allow your own devices to reach `192.168.178.205:53` and
+  `192.168.178.207:443`

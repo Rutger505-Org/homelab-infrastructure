@@ -4,3 +4,11 @@ provider "adguard" {
   username = "admin"
   scheme   = "http"
 }
+
+# Tailnet DNS settings. OAuth client from TAILSCALE_OAUTH_CLIENT_ID and
+# TAILSCALE_OAUTH_CLIENT_SECRET, with the dns scope; tailnet "-" is the
+# client's own tailnet.
+provider "tailscale" {
+  tailnet = "-"
+  scopes  = ["dns"]
+}
