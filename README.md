@@ -24,7 +24,8 @@ The VM addresses are `ansible_host` in `ansible/inventory.yml`; keep this list i
 
 - `.201` k3s-1 (server), `.202` k3s-2 (agent)
 - `.205` AdGuard Home
-- `.206` OpenClaw (hand-built; the managed one is on `.210` until cutover)
+- `.206` OpenClaw, hand-built, Gateway stopped; delete with cutover step 4
+- `.210` OpenClaw
 - `.213` Tailscale subnet router
 - `.214` SeaweedFS (`cdn.rutgerpronk.com`)
 - `.215` Home Assistant
@@ -43,8 +44,8 @@ cloud-init only setting up the login user, SSH keys and the QEMU guest agent.
 that touches them (see CI below).
 
 Managed this way: SeaweedFS, Home Assistant, AdGuard Home, the reverse proxy, k3s-1,
-k3s-2, tailscale, and the replacement for the hand-built OpenClaw VM. Until that is
-cut over (see below), the hand-built original keeps running.
+k3s-2, tailscale and OpenClaw. The hand-built OpenClaw VM is cut over (see below) but
+not deleted yet.
 
 The hand-built VM (OpenClaw) is imported into the same
 state by `proxmox/manual-vms.tf`, mirroring their live config. OpenTofu tracks them
@@ -338,8 +339,9 @@ Not automated:
 - State outside the config repo (sessions, memory, channel credentials in
   `~/.openclaw`) is not backed up. Copy it over by hand
 
-The Gateway service is only installed with `openclaw_gateway_enabled: true`. Keep it
-off while the old VM runs: two Gateways with the same channel credentials both answer.
+The Gateway service is only installed with `openclaw_gateway_enabled: true`. Turn it off
+before running a second Gateway with the same state: two Gateways with the same channel
+credentials both answer.
 
 ### Cutover from the hand-built VMs
 
@@ -350,9 +352,9 @@ The new VMs run next to the old ones, with their own ids and addresses. Per VM:
    keep working. Rerun the kubernetes-infrastructure deploys, restore the data,
    regenerate service account kubeconfigs
 2. Tailscale (done): the old router (id 102, `.203`) is shut down and removed
-3. OpenClaw: stop the old Gateway, copy `~/.openclaw` over, set
-   `openclaw_gateway_enabled: true`, update the monitoring target (`.206:18789`) and the
-   `openclaw` record in `internal-dns/main.tf`
+3. OpenClaw (done): the old Gateway is stopped and disabled, the home directory
+   (`~/.openclaw`, `~/Source`, ...) copied over, `openclaw_gateway_enabled: true`, the
+   `openclaw` Caddy route and the kubernetes-infrastructure monitoring target point at `.210`
 4. Remove the old VM from `proxmox/manual-vms.tf` with a `removed` block
    (`lifecycle { destroy = false }`), then delete it in Proxmox. Already deleted in
    Proxmox (as K3s-1/K3s-2 were): delete its entry in `manual-vms.tf` before the next
