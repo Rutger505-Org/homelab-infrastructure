@@ -18,8 +18,8 @@ adguard_home_admin_password_hash: "{{ lookup('ansible.builtin.env', 'ADGUARD_ADM
 # rest of the config, Ansible owns the `dhcp` settings and writes them back on
 # every deploy, except the on/off switch: that stays in the web UI and defaults to
 # off, so a deploy never starts a second DHCP server next to the modem's. Turn it
-# on by hand while switching the modem's DHCP off. The pool stays below .199,
-# since .199-.250 are static (see inventory.yml).
+# on by hand while switching the modem's DHCP off. The pool ends at .180, well
+# below .199-.250, which are static (see inventory.yml).
 adguard_home_dhcp_range_start: 192.168.178.20
-adguard_home_dhcp_range_end: 192.168.178.198
+adguard_home_dhcp_range_end: 192.168.178.180
 adguard_home_dhcp_lease_duration: 86400
