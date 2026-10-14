@@ -1,0 +1,20 @@
+# Managed by Ansible (homelab-infrastructure, role k3s). k3s applies every file
+# in its manifests directory; this HelmChartConfig is merged into the values of
+# the Traefik chart k3s ships.
+apiVersion: helm.cattle.io/v1
+kind: HelmChartConfig
+metadata:
+  name: traefik
+  namespace: kube-system
+spec:
+  valuesContent: |-
+    ports:
+      websecure:
+        http3:
+          enabled: true
+          advertisedPort: {{ k3s_traefik_http3_port }}
+    service:
+      # TCP/443 and UDP/443 on one Service, so they share one MetalLB address.
+      single: true
+      spec:
+        loadBalancerIP: {{ k3s_traefik_ip }}

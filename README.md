@@ -288,6 +288,14 @@ disabled for MetalLB. Workloads come from
 kubernetes-infrastructure; PVCs (`local-path`) live on the root disk, so a rebuild
 loses them.
 
+Traefik (packaged with k3s) is configured from here, not from kubernetes-infrastructure:
+the role writes a `HelmChartConfig` to `/var/lib/rancher/k3s/server/manifests/traefik-config.yaml`
+before k3s first starts. It enables HTTP/3 (UDP/443 next to TCP/443 on one Service) and pins
+the MetalLB address `k3s_traefik_ip`. It has to be in place at install time: Kubernetes merges
+Service ports by port number only, so a helm *upgrade* that adds UDP/443 next to an existing
+TCP/443 folds the two together (`websecure` ended up targeting `websecure-http3`, HTTPS
+refused). k3s applies changes to the file on its own, no restart needed.
+
 The cluster CAs come from `K3S_CA_BUNDLE` and are put in place before k3s first starts,
 so a rebuilt server signs with the same CAs: existing admin kubeconfigs keep working,
 at `https://192.168.178.201:6443`, and so does the read-only kubeconfig from
