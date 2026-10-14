@@ -88,9 +88,7 @@ all:
           memory: 6144
           disk_size: 65
           data_disk_size: 0
-          # Off until the state is moved over from the old VM: two Gateways
-          # with the same channel credentials would both answer.
-          openclaw_gateway_enabled: false
+          openclaw_gateway_enabled: true
     home_assistant:
       hosts:
         home-assistant:
