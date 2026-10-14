@@ -151,3 +151,25 @@
   ansible.builtin.command: docker compose --project-directory {{ home_assistant_compose_dir }} up --detach --remove-orphans --wait
   register: home_assistant_up
   changed_when: home_assistant_up.stderr is search('Creat|Recreat|Pull')
+
+# Home Assistant writes its default configuration.yaml on first start; only add
+# to it afterwards, so the defaults (default_config, automations, ...) stay.
+- name: Wait for Home Assistant configuration
+  ansible.builtin.wait_for:
+    path: "{{ home_assistant_data_dir }}/config/configuration.yaml"
+    timeout: 300
+
+# Without this Home Assistant answers 400 to every request through the reverse
+# proxy (home-assistant.homelab.rutgerpronk.com), since it sends X-Forwarded-For.
+- name: Trust the reverse proxy
+  ansible.builtin.blockinfile:
+    path: "{{ home_assistant_data_dir }}/config/configuration.yaml"
+    marker: "# {mark} MANAGED BY ANSIBLE (homelab-infrastructure, role home_assistant)"
+    block: |
+      http:
+        use_x_forwarded_for: true
+        trusted_proxies:
+      {% for host in groups['reverse_proxy'] %}
+          - {{ hostvars[host].ansible_host }}
+      {% endfor %}
+  notify: Restart Home Assistant
