@@ -97,9 +97,10 @@
   notify: Restart adguard-home
   no_log: true
 
-# Only the dhcp section is Ansible's; everything else in the file stays as the
-# web UI left it. Written only when it differs, so a deploy without changes
-# does not restart AdGuard Home.
+# Only the dhcp settings are Ansible's; everything else in the file stays as the
+# web UI left it. dhcp.enabled is left out on purpose: it is switched in the web
+# UI together with the modem's DHCP, and AdGuard Home defaults it to off. Written
+# only when it differs, so a deploy without changes does not restart AdGuard Home.
 - name: Read config
   ansible.builtin.slurp:
     src: "{{ adguard_home_dir }}/AdGuardHome.yaml"
@@ -120,7 +121,6 @@
     adguard_home_config: "{{ adguard_home_config_file.content | b64decode | from_yaml }}"
     adguard_home_config_new: "{{ adguard_home_config | combine({'dhcp': adguard_home_dhcp}, recursive=true) }}"
     adguard_home_dhcp:
-      enabled: "{{ adguard_home_dhcp_enabled | bool }}"
       interface_name: "{{ ansible_facts.default_ipv4.interface }}"
       local_domain_name: lan
       dhcpv4:

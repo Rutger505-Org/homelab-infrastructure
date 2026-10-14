@@ -242,13 +242,14 @@ the web UI on port 80 are reachable; nftables drops everything else.
 - Password: the seed only takes a bcrypt hash, e.g. `htpasswd -nbBC 10 "" <password> | tr -d ':\n'`.
   Changing the secret does not change the password of a running instance.
 - Upgrade: bump `adguard_home_version`; the built-in updater is off
-- DHCP: the Ziggo modem refuses a private address as DNS server, so AdGuard Home is the
-  LAN's DHCP server and hands out itself as DNS server. The modem's DHCP server must be
-  off; two DHCP servers on one LAN hand out conflicting leases. Pool `.20`-`.198`,
-  gateway `.1`, 24 h leases, clients resolve as `<hostname>.lan`. Ansible owns the
-  `dhcp` section of the config (`adguard_home_dhcp_*` in the role defaults) and writes it
-  back on every deploy, so change it there, not in the web UI. Static leases are set in
-  the web UI
+- DHCP: the Ziggo modem refuses a private address as DNS server, so AdGuard Home is meant
+  to be the LAN's DHCP server and hand out itself as DNS server. Ansible configures it
+  (pool `.20`-`.198`, gateway `.1`, 24 h leases, clients resolve as `<hostname>.lan`;
+  `adguard_home_dhcp_*` in the role defaults) but never switches it on: a deploy must not
+  start a second DHCP server next to the modem's. Switch it by hand, at the same time:
+  modem DHCP off, then Settings → DHCP settings → Enable DHCP server in the web UI. A
+  rebuilt VM starts with DHCP off again. Change the pool in the role defaults, not the web
+  UI, a deploy writes it back. Static leases are set in the web UI
 - Single instance: when the VM is down, LAN clients lose DNS and new devices get no
   address. Turn the modem's DHCP server back on to fall back
 
