@@ -7,7 +7,8 @@ caddy_domain: homelab.rutgerpronk.com
 # Zone:DNS:Edit on rutgerpronk.com, for the DNS-01 challenge of the wildcard certificate.
 caddy_cloudflare_api_token: "{{ lookup('ansible.builtin.env', 'CLOUDFLARE_API_TOKEN') }}"
 
-# <name>.homelab.rutgerpronk.com => upstream.
+# <name>.homelab.rutgerpronk.com => upstream. The bare domain serves a page
+# linking all of them.
 #   upstream:      URL Caddy proxies to
 #   insecure_tls:  skip certificate checks for an https upstream with a self-signed certificate
 #   upstream_host: Host header and TLS server name to send, for name-based upstreams like Traefik

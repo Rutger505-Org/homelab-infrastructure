@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ caddy_domain }}</title>
+<style>
+  :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+  body { max-width: 32rem; margin: 3rem auto; padding: 0 1rem; }
+  h1 { font-size: 1.25rem; }
+  ul { list-style: none; padding: 0; }
+  li { margin: 0.25rem 0; }
+  a { display: block; padding: 0.75rem 1rem; border: 1px solid #8884; border-radius: 0.5rem; text-decoration: none; color: inherit; }
+  a:hover { background: #8882; }
+  small { opacity: 0.6; }
+</style>
+</head>
+<body>
+<h1>{{ caddy_domain }}</h1>
+<ul>
+{% for name in caddy_routes | sort %}
+  <li><a href="https://{{ name }}.{{ caddy_domain }}/">{{ name }} <small>{{ name }}.{{ caddy_domain }}</small></a></li>
+{% endfor %}
+</ul>
+</body>
+</html>

@@ -1,4 +1,4 @@
-*.{{ caddy_domain }} {
+{{ caddy_domain }}, *.{{ caddy_domain }} {
 	# DNS-01, so nothing has to be reachable from the internet. Public resolvers
 	# for the propagation check, since the LAN DNS rewrites this domain.
 	tls {
@@ -29,6 +29,13 @@
 	}
 
 {% endfor %}
+	# The bare domain: a page linking every route above.
+	@index host {{ caddy_domain }}
+	handle @index {
+		root * /etc/caddy/site
+		file_server
+	}
+
 	handle {
 		respond "Unknown service" 404
 	}
