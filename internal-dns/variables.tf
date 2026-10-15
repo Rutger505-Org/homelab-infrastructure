@@ -7,5 +7,5 @@ variable "state_passphrase" {
 variable "adguard_host" {
   description = "AdGuard Home web UI address as host[:port]"
   type        = string
-  default     = "192.168.178.205"
+  default     = "192.168.1.205"
 }

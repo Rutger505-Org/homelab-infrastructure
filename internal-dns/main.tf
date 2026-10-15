@@ -6,10 +6,10 @@ locals {
   # ansible/roles/caddy). Only exists in AdGuard Home, so it resolves for
   # LAN clients that use it as DNS server. Outside the LAN the public
   # *.rutgerpronk.com wildcard still answers with the home IP.
-  reverse_proxy = "192.168.178.207"
+  reverse_proxy = "192.168.1.207"
 
   # AdGuard Home's DNS address, for the tailnet split DNS below.
-  adguard_dns = "192.168.178.205"
+  adguard_dns = "192.168.1.205"
 }
 
 # The bare domain, for the landing page linking every service.

@@ -43,5 +43,5 @@ variable "lan_prefix_length" {
 variable "lan_gateway" {
   description = "LAN gateway, also used as DNS server"
   type        = string
-  default     = "192.168.178.1"
+  default     = "192.168.1.1"
 }

@@ -5,4 +5,4 @@ tailscale_router_oauth_secret: "{{ lookup('ansible.builtin.env', 'TAILSCALE_ROUT
 tailscale_router_tag: tag:homelab
 # Approved automatically through autoApprovers in the tailnet policy.
 tailscale_router_routes:
-  - 192.168.178.0/24
+  - 192.168.1.0/24
