@@ -5,7 +5,7 @@ Two Proxmox nodes running Debian VMs (OpenClaw: Arch), all as code. This README 
 ## Where things live
 
 - `ansible/inventory.yml`: every VM (address, id, node, size) and the LAN/IPv6 address plan. Source of truth for OpenTofu and Ansible.
-- `proxmox/` (OpenTofu): creates the VMs from cloud images. cloud-init only sets the login user, SSH keys and guest agent.
+- `proxmox/` (OpenTofu): creates the VMs from cloud images. cloud-init only sets the login user, SSH keys and guest agent. Also the guest agent privileges of the shared monitoring token (`monitoring.tf`).
 - `ansible/playbook.yml`, `ansible/roles/<role>/`: configures each VM. Versions and settings in the role's `defaults/`.
 - `ansible/proxmox.yml`, `ansible/proxmox-inventory.yml`: the Proxmox nodes themselves (no-nag patch, tag colors), over root SSH. Separate inventory so OpenTofu never sees the nodes.
 - `dns/` (OpenTofu): every Cloudflare record of `rutgerpronk.com` and `rutgerpronk.nl`. Dashboard edits are drift and get reverted.
