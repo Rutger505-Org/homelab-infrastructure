@@ -61,8 +61,12 @@ resource "proxmox_virtual_environment_vm" "this" {
     type  = "host"
   }
 
+  # Ballooning: Proxmox takes memory above memory_min back from the guest
+  # when the node runs above 80% RAM, and free page reporting returns memory
+  # the guest freed. Without it a VM keeps every page it ever touched.
   memory {
     dedicated = var.memory
+    floating  = var.memory_min
   }
 
   disk {

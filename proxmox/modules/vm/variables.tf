@@ -19,8 +19,18 @@ variable "cores" {
 }
 
 variable "memory" {
-  description = "Memory in MiB"
+  description = "Maximum memory in MiB"
   type        = number
+}
+
+variable "memory_min" {
+  description = "Memory in MiB the balloon never takes back from the guest"
+  type        = number
+
+  validation {
+    condition     = var.memory_min > 0 && var.memory_min <= var.memory
+    error_message = "memory_min must be above 0 (0 disables ballooning) and at most memory."
+  }
 }
 
 variable "disk_size" {
