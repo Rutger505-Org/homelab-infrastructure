@@ -8,8 +8,9 @@
 # itself needs some of that. Every VM has a balloon device: `memory` is the
 # maximum, `memory_min` what Proxmox leaves the guest when the node runs
 # above 80% RAM. The `memory` sums may go over the node, the `memory_min`
-# sums must fit. k3s nodes keep a high minimum: a shrinking node makes the
-# kubelet evict pods.
+# sums must fit. k3s nodes keep a high minimum: the kubelet reads the node's
+# memory once at start and does not see the balloon, so a shrunk node gets
+# the guest OOM killer instead of pod evictions.
 # - proxmox-lade: memory 13.5 GB, memory_min 8.75 GB
 # - proxmox-prodesk: memory 6.5 GB, memory_min 4.5 GB
 #
