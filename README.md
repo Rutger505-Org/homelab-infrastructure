@@ -42,6 +42,7 @@ OpenTofu state is in the R2 bucket `homelab-tofu-state` (one key per root), encr
 - Home Assistant: onboarding creates the owner; add the MQTT integration with broker `localhost`. Proxy trust in the UI (HTTP server) gets overwritten by the role; other HTTP server settings stay. The role fails on an unknown `.storage/http` version after an HA upgrade: check the format, bump the expected version.
 - OpenClaw VM: run dev-env's `install.sh` by hand. `.env` is only written when missing, so keep `OPENCLAW_ENV` up to date. State outside the config repo (sessions, memory, channel credentials) is not backed up. Set `openclaw_gateway_enabled: false` before running a second Gateway with the same state, or both answer.
 - Grafana is LAN only: Caddy is its only route in, to its MetalLB address `.231`.
+- Pulse is LAN only the same way, on `.232`. It trusts forwarded headers from Caddy (`192.168.178.207`) only, so a new proxy address must also change `trusted_proxy_cidrs` in kubernetes-infrastructure.
 - Proxmox no-nag: the run fails when a widget toolkit update breaks the patch. Tag style changes made in the UI get overwritten.
 
 ### k3s CA bundle

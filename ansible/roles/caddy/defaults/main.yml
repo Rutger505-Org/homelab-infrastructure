@@ -28,3 +28,6 @@ caddy_routes:
   # Grafana's own MetalLB address in k3s (grafana_load_balancer_ip in kubernetes-infrastructure).
   grafana:
     upstream: http://192.168.178.231:80
+  # Pulse's MetalLB address in k3s (pulse_load_balancer_ip in kubernetes-infrastructure).
+  pulse:
+    upstream: http://192.168.178.232:7655
