@@ -46,6 +46,7 @@ module "vm" {
   node_name      = each.value.proxmox_node
   cores          = each.value.cores
   memory         = each.value.memory
+  memory_min     = each.value.memory_min
   disk_size      = each.value.disk_size
   data_disk_size = each.value.data_disk_size
 

@@ -24,7 +24,7 @@ OpenTofu state is in the R2 bucket `homelab-tofu-state` (one key per root), encr
 
 ## Common changes
 
-- Add a VM: host in the inventory (all size fields required, no defaults), a play in `playbook.yml`, the group in `deploy-services.yaml`. Optional `os: arch`, `ansible_user`.
+- Add a VM: host in the inventory (all size fields required, no defaults; `memory_min` is the balloon floor, see the inventory header), a play in `playbook.yml`, the group in `deploy-services.yaml`. Optional `os: arch`, `ansible_user`.
 - Rebuild a VM: `prevent_destroy` in `proxmox/modules/vm/main.tf` fails the run; remove it on purpose.
 - Changing `ansible_host`: new cloud-init instance id, so new address and new SSH host keys on next boot.
 - SSH keys: `ssh_authorized_keys` in the inventory is the exact `authorized_keys` on every VM; keep `homelab-ci`. Per host extras: `ssh_extra_authorized_keys`.
