@@ -11,7 +11,7 @@
 # sums must fit. k3s nodes keep a high minimum: the kubelet reads the node's
 # memory once at start and does not see the balloon, so a shrunk node gets
 # the guest OOM killer instead of pod evictions.
-# - proxmox-lade: memory 13.5 GB, memory_min 8.75 GB
+# - proxmox-lade: memory 13.5 GB, memory_min 7.75 GB
 # - proxmox-prodesk: memory 6.5 GB, memory_min 4.5 GB
 #
 # LAN addresses (192.168.178.x, static, outside the router's DHCP range):
@@ -94,7 +94,7 @@ all:
           ansible_user: openclaw
           cores: 4
           memory: 6144
-          memory_min: 4096
+          memory_min: 3072
           disk_size: 65
           data_disk_size: 0
           openclaw_gateway_enabled: true
