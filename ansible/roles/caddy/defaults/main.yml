@@ -14,17 +14,17 @@ caddy_cloudflare_api_token: "{{ lookup('ansible.builtin.env', 'CLOUDFLARE_API_TO
 #   upstream_host: Host header and TLS server name to send, for name-based upstreams like Traefik
 caddy_routes:
   adguard:
-    upstream: http://192.168.178.205:80
+    upstream: http://192.168.1.205:80
   openclaw:
-    upstream: http://192.168.178.210:18789
+    upstream: http://192.168.1.210:18789
   proxmox-lade:
-    upstream: https://192.168.178.200:8006
+    upstream: https://192.168.1.200:8006
     insecure_tls: true
   proxmox-prodesk:
-    upstream: https://192.168.178.199:8006
+    upstream: https://192.168.1.199:8006
     insecure_tls: true
   home-assistant:
-    upstream: http://192.168.178.215:8123
+    upstream: http://192.168.1.215:8123
   # Grafana's own MetalLB address in k3s (grafana_load_balancer_ip in kubernetes-infrastructure).
   grafana:
-    upstream: http://192.168.178.231:80
+    upstream: http://192.168.1.231:80

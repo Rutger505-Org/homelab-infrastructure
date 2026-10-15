@@ -28,7 +28,7 @@ OpenTofu state is in the R2 bucket `homelab-tofu-state` (one key per root), encr
 - Rebuild a VM: `prevent_destroy` in `proxmox/modules/vm/main.tf` fails the run; remove it on purpose.
 - Changing `ansible_host`: new cloud-init instance id, so new address and new SSH host keys on next boot.
 - SSH keys: `ssh_authorized_keys` in the inventory is the exact `authorized_keys` on every VM; keep `homelab-ci`. Per host extras: `ssh_extra_authorized_keys`.
-- New `<service>.homelab.rutgerpronk.com`: an entry in `caddy_routes`, no DNS change; it also shows up on the `homelab.rutgerpronk.com` landing page. Some apps must trust the proxy (`192.168.178.207`):
+- New `<service>.homelab.rutgerpronk.com`: an entry in `caddy_routes`, no DNS change; it also shows up on the `homelab.rutgerpronk.com` landing page. Some apps must trust the proxy (`192.168.1.207`):
   - Home Assistant: done by the role, in the confirmed (`stable`) slot of `.storage/http` (YAML `http:` is ignored since 2026.8); from the `reverse_proxy` group
   - OpenClaw: URL in `gateway.controlUi.allowedOrigins`, proxy in `gateway.trustedProxies`
 - Upgrade a service: bump its `*_version` in the role defaults.
@@ -49,9 +49,9 @@ OpenTofu state is in the R2 bucket `homelab-tofu-state` (one key per root), encr
 `K3S_CA_BUNDLE` holds the cluster CAs (including private keys: full cluster admin), so a rebuilt cluster keeps working with existing kubeconfigs. The role refuses to install without it. Export it from the running server (pack first, so a sudo prompt can't end up in the secret):
 
 ```bash
-ssh -t debian@192.168.178.201 'sudo sh -c "cd /var/lib/rancher/k3s/server/tls && tar -czf ~debian/k3s-ca.tar.gz *-ca.crt *-ca.key service*.key \$(ls -d etcd/*-ca.* 2>/dev/null) && chown debian ~debian/k3s-ca.tar.gz"'
-ssh debian@192.168.178.201 'tar -tzf k3s-ca.tar.gz'   # expect server-ca.key, client-ca.key, ...
-ssh debian@192.168.178.201 'base64 -w0 k3s-ca.tar.gz && rm k3s-ca.tar.gz' \
+ssh -t debian@192.168.1.201 'sudo sh -c "cd /var/lib/rancher/k3s/server/tls && tar -czf ~debian/k3s-ca.tar.gz *-ca.crt *-ca.key service*.key \$(ls -d etcd/*-ca.* 2>/dev/null) && chown debian ~debian/k3s-ca.tar.gz"'
+ssh debian@192.168.1.201 'tar -tzf k3s-ca.tar.gz'   # expect server-ca.key, client-ca.key, ...
+ssh debian@192.168.1.201 'base64 -w0 k3s-ca.tar.gz && rm k3s-ca.tar.gz' \
   | gh secret set K3S_CA_BUNDLE -R Rutger505-Org/homelab-infrastructure
 ```
 
@@ -66,7 +66,7 @@ ssh debian@192.168.178.201 'base64 -w0 k3s-ca.tar.gz && rm k3s-ca.tar.gz' \
 - Enable `Snippets` and `Import` content on the `local` storage.
 - `ssh-keygen -t ed25519 -f homelab-ci -C homelab-ci`; public key in `/root/.ssh/authorized_keys` on both nodes (OpenTofu uploads snippets over SSH), private key as `HOMELAB_SSH_PRIVATE_KEY`.
 - R2 bucket `homelab-tofu-state` with an Object Read & Write token; state passphrase of 16+ characters.
-- Tailscale: `tag:ci-homelab` in `tagOwners`. OAuth clients: CI (`auth_keys` write, `tag:ci-homelab`), router (`auth_keys` write, `tag:homelab`, never expires so a rebuild can rejoin), DNS (`dns` write). ACLs: `tag:ci-homelab` → `192.168.178.0/24` ports 22, 8006 and `192.168.178.205:80`; own devices → `192.168.178.205:53`, `192.168.178.207:443`.
+- Tailscale: `tag:ci-homelab` in `tagOwners`. OAuth clients: CI (`auth_keys` write, `tag:ci-homelab`), router (`auth_keys` write, `tag:homelab`, never expires so a rebuild can rejoin), DNS (`dns` write). ACLs: `tag:ci-homelab` → `192.168.1.0/24` ports 22, 8006 and `192.168.1.205:80`; own devices → `192.168.1.205:53`, `192.168.1.207:443`.
 - Cloudflare token with `Zone:DNS:Edit`, `Zone:Single Redirect:Edit`, `Zone:Zone:Read` on both zones → `CLOUDFLARE_DNS_API_TOKEN` (also the reverse proxy's DNS-01 challenge).
 - Secrets with a non-obvious value: `K3S_TOKEN` (`openssl rand -hex 32`), `ADGUARD_ADMIN_PASSWORD_HASH` (`htpasswd -nbBC 10 "" <password> | tr -d ':\n'`, plain text in `ADGUARD_ADMIN_PASSWORD`), `OPENCLAW_READONLY_KUBECONFIG` (kubernetes-infrastructure `4-rbac`), `OPENCLAW_ENV` (`~/.openclaw/.env`).
 

@@ -11,8 +11,8 @@ all:
         # proxmox_tag_color: background:text (hex) of the tag OpenTofu puts
         # on every VM running on this node.
         proxmox-lade:
-          ansible_host: 192.168.178.200
+          ansible_host: 192.168.1.200
           proxmox_tag_color: 1E88E5:FFFFFF
         proxmox-prodesk:
-          ansible_host: 192.168.178.199
+          ansible_host: 192.168.1.199
           proxmox_tag_color: 43A047:FFFFFF

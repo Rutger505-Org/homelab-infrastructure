@@ -11,7 +11,7 @@
 # - proxmox-lade: 13.5 GB here
 # - proxmox-prodesk: 6.5 GB here
 #
-# LAN addresses (192.168.178.x, static, outside the router's DHCP range):
+# LAN addresses (192.168.1.x, static, outside the router's DHCP range):
 # - .199-.200: Proxmox nodes
 # - .201-.229: VMs
 # - .230-.250: MetalLB, Kubernetes LoadBalancer services
@@ -39,7 +39,7 @@ all:
     seaweedfs:
       hosts:
         seaweedfs-server:
-          ansible_host: 192.168.178.214
+          ansible_host: 192.168.1.214
           vm_id: 904
           proxmox_node: proxmox-lade
           cores: 1
@@ -49,7 +49,7 @@ all:
     k3s_server:
       hosts:
         k3s-1:
-          ansible_host: 192.168.178.201
+          ansible_host: 192.168.1.201
           vm_id: 911
           proxmox_node: proxmox-lade
           cores: 4
@@ -59,7 +59,7 @@ all:
     k3s_agent:
       hosts:
         k3s-2:
-          ansible_host: 192.168.178.202
+          ansible_host: 192.168.1.202
           vm_id: 912
           proxmox_node: proxmox-prodesk
           cores: 4
@@ -70,7 +70,7 @@ all:
     tailscale_router:
       hosts:
         tailscale:
-          ansible_host: 192.168.178.213
+          ansible_host: 192.168.1.213
           vm_id: 913
           proxmox_node: proxmox-lade
           cores: 1
@@ -80,7 +80,7 @@ all:
     openclaw_gateway:
       hosts:
         openclaw:
-          ansible_host: 192.168.178.210
+          ansible_host: 192.168.1.210
           vm_id: 910
           proxmox_node: proxmox-lade
           os: arch
@@ -93,7 +93,7 @@ all:
     home_assistant:
       hosts:
         home-assistant:
-          ansible_host: 192.168.178.215
+          ansible_host: 192.168.1.215
           vm_id: 905
           proxmox_node: proxmox-prodesk
           cores: 2
@@ -103,7 +103,7 @@ all:
     adguard_home:
       hosts:
         adguard-home:
-          ansible_host: 192.168.178.205
+          ansible_host: 192.168.1.205
           # 2001:1c07:504:1d00::53, set as IPv6 DNS server in the modem: it
           # refuses a private IPv4 address, and IPv6 clients would otherwise
           # bypass AdGuard Home.
@@ -117,7 +117,7 @@ all:
     reverse_proxy:
       hosts:
         reverse-proxy:
-          ansible_host: 192.168.178.207
+          ansible_host: 192.168.1.207
           vm_id: 907
           proxmox_node: proxmox-prodesk
           cores: 1
