@@ -39,9 +39,9 @@ all:
       - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJWqMziuQxU76b0XIGdBuk48tjN71/D4FGZst0W3Mkya rutger@rutger-cheapcargo-laptop-omarchy
       - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAzdG1/zOJzA5TzmRdGS6O/iCEAirVxAFLAbbYyuJeaN homelab-ci
   children:
-    seaweedfs:
+    object_storage:
       hosts:
-        seaweedfs-server:
+        seaweedfs:
           ansible_host: 192.168.178.214
           vm_id: 904
           proxmox_node: proxmox-lade

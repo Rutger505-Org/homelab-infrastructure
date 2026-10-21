@@ -40,7 +40,7 @@
     - ssh_keys
 
 - name: Install SeaweedFS
-  hosts: seaweedfs
+  hosts: object_storage
   become: true
   roles:
     - seaweedfs

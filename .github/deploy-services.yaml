@@ -12,7 +12,7 @@ shared: &shared
   - ansible/roles/ssh_keys/**
   - proxmox/**
 
-seaweedfs:
+object_storage:
   - *shared
   - ansible/roles/seaweedfs/**
 
