@@ -68,3 +68,11 @@ module "vm" {
   username        = try(each.value.ansible_user, local.inventory.all.vars.ansible_user)
   ssh_public_keys = local.inventory.all.vars.ssh_authorized_keys
 }
+
+# The SeaweedFS VM was called seaweedfs-server; the host is now seaweedfs and
+# its group object_storage, as a host and group with the same name clash in
+# Ansible. Keeps the VM instead of replacing it.
+moved {
+  from = module.vm["seaweedfs-server"]
+  to   = module.vm["seaweedfs"]
+}
