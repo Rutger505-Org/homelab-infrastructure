@@ -7,6 +7,13 @@ seaweedfs_s3_port: 8333
 # server sizes its slot count as free disk / this limit. Small volumes keep
 # enough slots free for every bucket.
 seaweedfs_volume_size_limit_mb: 256
+# Go runtime soft memory limit for the weed process (master, volume, filer and
+# S3 in one): the GC works harder near it instead of growing until the OOM
+# killer steps in. Leaves room for the OS and page cache below `memory` (2048).
+seaweedfs_go_mem_limit: 1536MiB
+# Upload data the S3 gateway, filer and volume server each keep in flight.
+# Uploads over the limit wait for a slot instead of piling up in memory.
+seaweedfs_concurrent_upload_limit_mb: 64
 # Objects are anonymously readable per file; listing and writes need the admin key.
 seaweedfs_buckets:
   - clips

@@ -9,6 +9,7 @@ RequiresMountsFor={{ seaweedfs_data_dir }}
 User=seaweedfs
 Group=seaweedfs
 WorkingDirectory={{ seaweedfs_data_dir }}
+Environment=GOMEMLIMIT={{ seaweedfs_go_mem_limit }}
 # Master, volume and filer only listen on localhost; the S3 gateway is the one
 # thing exposed, and the Iceberg and Lance endpoints are disabled.
 ExecStart=/usr/local/bin/weed server \
@@ -17,10 +18,13 @@ ExecStart=/usr/local/bin/weed server \
   -ip.bind=127.0.0.1 \
   -master.volumeSizeLimitMB={{ seaweedfs_volume_size_limit_mb }} \
   -volume.max=0 \
+  -volume.concurrentUploadLimitMB={{ seaweedfs_concurrent_upload_limit_mb }} \
   -filer \
   -filer.disableDirListing \
+  -filer.concurrentUploadLimitMB={{ seaweedfs_concurrent_upload_limit_mb }} \
   -s3 \
   -s3.port={{ seaweedfs_s3_port }} \
+  -s3.concurrentUploadLimitMB={{ seaweedfs_concurrent_upload_limit_mb }} \
   -s3.ip.bind=0.0.0.0 \
   -s3.port.iceberg=0 \
   -s3.port.lance=0 \
