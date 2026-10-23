@@ -11,7 +11,7 @@
 # sums must fit. k3s nodes keep a high minimum: the kubelet reads the node's
 # memory once at start and does not see the balloon, so a shrunk node gets
 # the guest OOM killer instead of pod evictions.
-# - proxmox-lade: memory 13.5 GB, memory_min 7.75 GB
+# - proxmox-lade: memory 14.5 GB, memory_min 7.75 GB
 # - proxmox-prodesk: memory 6.5 GB, memory_min 4.5 GB
 #
 # LAN addresses (192.168.178.x, static, outside the router's DHCP range):
@@ -45,8 +45,11 @@ all:
           ansible_host: 192.168.178.214
           vm_id: 904
           proxmox_node: proxmox-lade
-          cores: 1
-          memory: 1024
+          # A single core could not keep up with a large upload: the volume
+          # server stopped answering, chunk uploads timed out and piled up in
+          # memory until the OOM killer stopped weed.
+          cores: 3
+          memory: 2048
           memory_min: 512
           disk_size: 10
           data_disk_size: 60
