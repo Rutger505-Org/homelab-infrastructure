@@ -1,9 +1,10 @@
 home_assistant_version: "2026.10.1"
 home_assistant_mosquitto_version: "2.0.22"
 home_assistant_timezone: Europe/Amsterdam
-home_assistant_data_dir: /srv/home-assistant
-# Second disk (scsi1) from OpenTofu, so config, history and retained MQTT
-# messages survive a rebuild of the root disk.
+# Separate volume from OpenTofu, so config, history and retained MQTT messages
+# survive a rebuild of the root disk. In a container Proxmox mounts it at
+# data_disk_path; in a VM it is the second disk (scsi1) below.
+home_assistant_data_dir: "{{ data_disk_path | default('/srv/home-assistant') }}"
 home_assistant_data_device: /dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi1
 home_assistant_compose_dir: /etc/home-assistant
 home_assistant_mqtt_username: "{{ lookup('ansible.builtin.env', 'MQTT_USERNAME') }}"

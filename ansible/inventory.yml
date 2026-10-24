@@ -1,8 +1,22 @@
-# Single source of truth for the VMs: OpenTofu creates a VM for every
-# host below, Ansible configures it. vm_id, proxmox_node, cores, memory,
-# memory_min, disk_size and data_disk_size are read by OpenTofu only and all
-# required, there are no defaults (data_disk_size: 0 for no data disk). `os`
-# is the exception: debian unless set to arch.
+# Single source of truth for the guests: OpenTofu creates a VM or LXC
+# container for every host below, Ansible configures it. vm_id, proxmox_node,
+# cores, memory, memory_min, disk_size and data_disk_size are read by OpenTofu
+# only and all required, there are no defaults (data_disk_size: 0 for no data
+# disk). `os` is the exception: debian unless set to arch.
+#
+# VM or container: home-network services (DNS, reverse proxy, Tailscale, Home
+# Assistant) are unprivileged LXC containers (`guest_type: lxc`), everything
+# reachable from the internet (k3s, its storage) stays a VM for the stronger
+# isolation. Containers:
+# - Debian 13 template, no cloud-init: only root, so `ansible_user: root` and
+#   `ansible_become: false` (there is no sudo).
+# - no memory_min: memory is a limit, not a reservation (see below).
+# - data_disk_size needs data_disk_path, where Proxmox mounts the volume.
+# - lxc_keyctl: true for Docker, lxc_devices for host devices (/dev/net/tun).
+# - retired_vm: the VM a container replaced, kept stopped with its disks for a
+#   rollback. Lists that VM's vm_id, cores, memory, memory_min, disk_size,
+#   data_disk_size and `started`; address and login default to the
+#   container's and the shared user. Ansible ignores it.
 #
 # Node memory: proxmox-lade has 16 GB, proxmox-prodesk 8 GB, and Proxmox
 # itself needs some of that. Every VM has a balloon device: `memory` is the
@@ -10,9 +24,12 @@
 # above 80% RAM. The `memory` sums may go over the node, the `memory_min`
 # sums must fit. k3s nodes keep a high minimum: the kubelet reads the node's
 # memory once at start and does not see the balloon, so a shrunk node gets
-# the guest OOM killer instead of pod evictions.
-# - proxmox-lade: memory 14.5 GB, memory_min 7.75 GB
-# - proxmox-prodesk: memory 6.5 GB, memory_min 4.5 GB
+# the guest OOM killer instead of pod evictions. A container's `memory` is a
+# cgroup limit: the node only gives it what its processes use, with no guest
+# kernel or page cache of its own on top.
+# - proxmox-lade: VMs memory 14 GB, memory_min 7.5 GB (plus 0.5/0.25 GB while
+#   the retired tailscale VM runs); containers 0.25 GB
+# - proxmox-prodesk: VMs memory 4 GB, memory_min 3 GB; containers 2.75 GB
 #
 # LAN addresses (192.168.178.x, static, outside the router's DHCP range):
 # - .199-.200: Proxmox nodes
@@ -79,14 +96,30 @@ all:
     tailscale_router:
       hosts:
         tailscale:
-          ansible_host: 192.168.178.213
-          vm_id: 913
+          guest_type: lxc
+          # A new address: CI reaches the LAN through this router, so the old
+          # VM keeps running on .213 (a second router for the same route)
+          # until this one is up.
+          ansible_host: 192.168.178.216
+          ansible_user: root
+          ansible_become: false
+          vm_id: 923
           proxmox_node: proxmox-lade
           cores: 1
-          memory: 512
-          memory_min: 256
-          disk_size: 8
+          memory: 256
+          disk_size: 4
           data_disk_size: 0
+          lxc_devices:
+            - /dev/net/tun
+          retired_vm:
+            ansible_host: 192.168.178.213
+            vm_id: 913
+            cores: 1
+            memory: 512
+            memory_min: 256
+            disk_size: 8
+            data_disk_size: 0
+            started: true
     openclaw_gateway:
       hosts:
         openclaw:
@@ -104,37 +137,70 @@ all:
     home_assistant:
       hosts:
         home-assistant:
+          guest_type: lxc
           ansible_host: 192.168.178.215
-          vm_id: 905
+          ansible_user: root
+          ansible_become: false
+          vm_id: 925
           proxmox_node: proxmox-prodesk
           cores: 2
           memory: 2048
-          memory_min: 1024
-          disk_size: 16
+          # Docker images and their layers.
+          disk_size: 12
           data_disk_size: 10
+          data_disk_path: /srv/home-assistant
+          lxc_keyctl: true
+          retired_vm:
+            vm_id: 905
+            cores: 2
+            memory: 2048
+            memory_min: 1024
+            disk_size: 16
+            data_disk_size: 10
+            started: false
     adguard_home:
       hosts:
         adguard-home:
+          guest_type: lxc
           ansible_host: 192.168.178.205
+          ansible_user: root
+          ansible_become: false
           # 2001:1c07:504:1d00::53, set as IPv6 DNS server in the modem: it
           # refuses a private IPv4 address, and IPv6 clients would otherwise
           # bypass AdGuard Home.
           ipv6_host: "53"
-          vm_id: 906
+          vm_id: 926
           proxmox_node: proxmox-prodesk
           cores: 1
           memory: 512
-          memory_min: 256
-          disk_size: 8
+          disk_size: 4
           data_disk_size: 0
+          retired_vm:
+            vm_id: 906
+            cores: 1
+            memory: 512
+            memory_min: 256
+            disk_size: 8
+            data_disk_size: 0
+            started: false
     reverse_proxy:
       hosts:
         reverse-proxy:
+          guest_type: lxc
           ansible_host: 192.168.178.207
-          vm_id: 907
+          ansible_user: root
+          ansible_become: false
+          vm_id: 927
           proxmox_node: proxmox-prodesk
           cores: 1
-          memory: 512
-          memory_min: 256
-          disk_size: 8
+          memory: 256
+          disk_size: 4
           data_disk_size: 0
+          retired_vm:
+            vm_id: 907
+            cores: 1
+            memory: 512
+            memory_min: 256
+            disk_size: 8
+            data_disk_size: 0
+            started: false

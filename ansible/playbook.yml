@@ -1,7 +1,25 @@
-- name: Wait for fresh VMs
+- name: Wait for fresh guests
   hosts: all
   gather_facts: false
   tasks:
+    # The container template has no Python, which every module but raw
+    # needs, and wait_for_connection runs one. So wait for the port instead.
+    - name: Wait for SSH on containers
+      ansible.builtin.wait_for:
+        host: "{{ ansible_host }}"
+        port: 22
+        timeout: 300
+      delegate_to: localhost
+      when: guest_type | default('vm') == 'lxc'
+
+    - name: Install Python on containers
+      ansible.builtin.raw: >-
+        command -v python3 > /dev/null ||
+        { apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y python3 && echo installed; }
+      register: python_install
+      changed_when: python_install.stdout is search('installed')
+      when: guest_type | default('vm') == 'lxc'
+
     - name: Wait for SSH
       ansible.builtin.wait_for_connection:
         timeout: 300
@@ -10,6 +28,7 @@
     # stalled deploys for hours. 15 minutes leaves room for the full package
     # upgrade on Arch.
     - name: Wait for cloud-init, explain a hang
+      when: guest_type | default('vm') == 'vm'
       block:
         - name: Wait for cloud-init to finish
           ansible.builtin.command: timeout 900 cloud-init status --wait

@@ -41,8 +41,9 @@ terraform {
 
   required_providers {
     proxmox = {
-      source  = "bpg/proxmox"
-      version = "~> 0.115"
+      source = "bpg/proxmox"
+      # 0.117 for ssh.root_ticket
+      version = "~> 0.117"
     }
   }
 }

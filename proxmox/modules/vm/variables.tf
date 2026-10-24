@@ -95,6 +95,12 @@ variable "bridge" {
   default     = "vmbr0"
 }
 
+variable "started" {
+  description = "Whether the VM runs and starts on boot; false for a retired VM kept for a rollback"
+  type        = bool
+  default     = true
+}
+
 variable "username" {
   description = "Login user created by cloud-init"
   type        = string

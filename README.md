@@ -1,12 +1,12 @@
 # homelab-infrastructure
 
-Two Proxmox nodes running Debian VMs (OpenClaw: Arch), all as code. This README only covers what the code can't tell you; for everything else read the files below.
+Two Proxmox nodes running Debian VMs (OpenClaw: Arch) and LXC containers, all as code. This README only covers what the code can't tell you; for everything else read the files below.
 
 ## Where things live
 
-- `ansible/inventory.yml`: every VM (address, id, node, size) and the LAN/IPv6 address plan. Source of truth for OpenTofu and Ansible.
-- `proxmox/` (OpenTofu): creates the VMs from cloud images. cloud-init only sets the login user, SSH keys and guest agent. Also the guest agent privileges of the shared monitoring token (`monitoring.tf`).
-- `ansible/playbook.yml`, `ansible/roles/<role>/`: configures each VM. Versions and settings in the role's `defaults/`.
+- `ansible/inventory.yml`: every VM and container (address, id, node, size) and the LAN/IPv6 address plan. Source of truth for OpenTofu and Ansible.
+- `proxmox/` (OpenTofu): creates the VMs from cloud images and the containers from the Debian template. cloud-init only sets the login user, SSH keys and guest agent; a container only gets root's SSH keys. Also the guest agent privileges of the shared monitoring token (`monitoring.tf`).
+- `ansible/playbook.yml`, `ansible/roles/<role>/`: configures each guest. Versions and settings in the role's `defaults/`.
 - `ansible/proxmox.yml`, `ansible/proxmox-inventory.yml`: the Proxmox nodes themselves (no-nag patch, tag colors), over root SSH. Separate inventory so OpenTofu never sees the nodes.
 - `dns/` (OpenTofu): every Cloudflare record of `rutgerpronk.com` and `rutgerpronk.nl`. Dashboard edits are drift and get reverted.
 - `internal-dns/` (OpenTofu): AdGuard rewrites (`homelab.rutgerpronk.com` and `*.homelab.rutgerpronk.com` → reverse proxy) and tailnet split DNS. Rewrites added in the web UI are left alone.
@@ -17,15 +17,18 @@ OpenTofu state is in the R2 bucket `homelab-tofu-state` (one key per root), encr
 ## CI
 
 - PR: `tofu plan` and `ansible-playbook --check --diff` against the live VMs (VMs the PR adds are skipped). Push to main: apply. A manual run deploys every service, e.g. to undo manual changes.
-- One Ansible job per service, limited to its inventory group. A `shared` path deploys all VM services.
+- One Ansible job per service, limited to its inventory group. A `shared` path deploys all services.
 - Check mode skips commands, so read-only probes need `check_mode: false`, otherwise later tasks report fake changes.
 - CI joins the tailnet as `tag:ci-homelab` and reaches the LAN through the `tailscale` subnet router. Router down: run locally.
-- `internal-dns` also applies after every successful deploy, so a rebuilt AdGuard VM gets its rewrites back.
+- `internal-dns` also applies after every successful deploy, so a rebuilt AdGuard container gets its rewrites back.
 
 ## Common changes
 
 - Add a VM: host in the inventory (all size fields required, no defaults; `memory_min` is the balloon floor, see the inventory header), a play in `playbook.yml`, the group in `deploy-services.yaml`. Optional `os: arch`, `ansible_user`.
-- Rebuild a VM: `prevent_destroy` in `proxmox/modules/vm/main.tf` fails the run; remove it on purpose.
+- VM or container: LAN-only services are unprivileged LXC containers (`guest_type: lxc`, see the inventory header), anything reachable from the internet stays a VM. Containers log in as root without sudo, so a role must not rely on `become` switching users. Docker needs `lxc_keyctl: true`, a TUN device `lxc_devices: [/dev/net/tun]`.
+- Both are root@pam only in Proxmox, which an API token never is: OpenTofu mints a root@pam ticket over its root SSH login for calls under `/nodes/` (`root_ticket` in `proxmox/providers.tf`).
+- Move a VM to a container: `guest_type: lxc` and a new `vm_id` on the host, the old specs under `retired_vm` with `started: false`. OpenTofu stops the VM before it creates the container, so the container can take over the address. Data does not move along: copy it over by hand (tar over SSH, then rerun the deploy). Rollback: `pct stop <ct>` and `qm start <vm>` on the node, then revert in git.
+- Rebuild a VM or container: `prevent_destroy` in `proxmox/modules/{vm,lxc}/main.tf` fails the run; remove it on purpose. Same for deleting a `retired_vm`.
 - Changing `ansible_host`: new cloud-init instance id, so new address and new SSH host keys on next boot.
 - SSH keys: `ssh_authorized_keys` in the inventory is the exact `authorized_keys` on every VM; keep `homelab-ci`. Per host extras: `ssh_extra_authorized_keys`.
 - New `<service>.homelab.rutgerpronk.com`: an entry in `caddy_routes`, no DNS change; it also shows up on the `homelab.rutgerpronk.com` landing page. Some apps must trust the proxy (`192.168.178.207`):
@@ -37,8 +40,10 @@ OpenTofu state is in the R2 bucket `homelab-tofu-state` (one key per root), encr
 ## Manual and not automated
 
 - **No backups** (no vzdump/PBS). k3s PVCs live on the root disk and are lost on rebuild.
+- Retired VMs (`retired_vm` in the inventory) still take up disk and are not configured by Ansible anymore. Remove them once the container is known good.
+- A container that took over a VM's address has new SSH host keys: `ssh-keygen -R <address>` locally.
 - cloud-init only runs on first boot; changes reach new VMs only (SSH keys excepted).
-- AdGuard Home: the config is seeded once, then owned by the web UI, except the `dhcp` settings. DHCP is never switched on by a deploy: turn the modem's DHCP off and enable it in the web UI by hand (a rebuilt VM starts with it off). If the VM is down, turn modem DHCP back on. The modem's IPv6 DNS field must be `2001:1c07:504:1d00::53`. Changing the password secret does not change a running instance.
+- AdGuard Home: the config is seeded once, then owned by the web UI, except the `dhcp` settings. DHCP is never switched on by a deploy: turn the modem's DHCP off and enable it in the web UI by hand (a rebuilt container starts with it off). If the container is down, turn modem DHCP back on. The modem's IPv6 DNS field must be `2001:1c07:504:1d00::53`. Changing the password secret does not change a running instance.
 - Home Assistant: onboarding creates the owner; add the MQTT integration with broker `localhost`. Proxy trust in the UI (HTTP server) gets overwritten by the role; other HTTP server settings stay. The role fails on an unknown `.storage/http` version after an HA upgrade: check the format, bump the expected version.
 - OpenClaw VM: run dev-env's `install.sh` by hand. `.env` is only written when missing, so keep `OPENCLAW_ENV` up to date. State outside the config repo (sessions, memory, channel credentials) is not backed up. Set `openclaw_gateway_enabled: false` before running a second Gateway with the same state, or both answer.
 - Grafana is LAN only: Caddy is its only route in, to its MetalLB address `.231`.
