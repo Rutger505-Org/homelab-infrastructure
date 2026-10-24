@@ -16,8 +16,11 @@ resource "proxmox_virtual_environment_role" "guest_agent_read" {
 }
 
 resource "proxmox_acl" "monitoring_guest_agent_read" {
-  user_id   = "prometheus@pve"
-  role_id   = proxmox_virtual_environment_role.guest_agent_read.role_id
-  path      = "/vms"
+  user_id = "prometheus@pve"
+  role_id = proxmox_virtual_environment_role.guest_agent_read.role_id
+  # On / next to its PVEAuditor ACL, so the roles add up. An ACL on /vms
+  # would replace the inherited PVEAuditor there ("permissions on deeper
+  # levels replace those inherited"), taking away VM.Audit: no guests visible.
+  path      = "/"
   propagate = true
 }
