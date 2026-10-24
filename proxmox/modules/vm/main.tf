@@ -39,6 +39,17 @@ resource "proxmox_virtual_environment_file" "cloud_config" {
     data      = local.cloud_config
     file_name = "${var.name}-cloud-config.yaml"
   }
+
+  # The VM keeps pointing at the snippet it was created with: its
+  # user_data_file_id is ignored below, as a change to it forces a replacement
+  # in bpg/proxmox. Replacing this file (a rename changes file_name, a new SSH
+  # key changes data) would delete the snippet the VM still references, and
+  # Proxmox then refuses to start the VM. So the snippet stays as created, like
+  # the VM's cloud-init config. To rebuild a VM with the current config,
+  # replace both: tofu apply -replace on this file and on the VM.
+  lifecycle {
+    ignore_changes = [source_raw]
+  }
 }
 
 resource "proxmox_virtual_environment_vm" "this" {
