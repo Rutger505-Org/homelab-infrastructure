@@ -34,6 +34,12 @@ variable "arch_image_url" {
   default     = "https://geo.mirror.pkgbuild.com/images/latest/Arch-Linux-x86_64-cloudimg.qcow2"
 }
 
+variable "debian_lxc_template_url" {
+  description = "Debian container template, for hosts with `guest_type: lxc`. Downloaded once per node and never refreshed, like the cloud images; new containers keep using it until it is deleted on purpose."
+  type        = string
+  default     = "http://download.proxmox.com/images/system/debian-13-standard_13.6-1_amd64.tar.zst"
+}
+
 variable "lan_prefix_length" {
   description = "Prefix length of the LAN the VMs are on"
   type        = number

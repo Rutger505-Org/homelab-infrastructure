@@ -7,3 +7,13 @@ output "vms" {
     }
   }
 }
+
+output "containers" {
+  description = "Created LXC containers by name"
+  value = {
+    for name, ct in module.lxc : name => {
+      vm_id   = ct.vm_id
+      address = ct.ipv4_address
+    }
+  }
+}

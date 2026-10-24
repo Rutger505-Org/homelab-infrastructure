@@ -6,5 +6,10 @@ provider "proxmox" {
   ssh {
     agent    = true
     username = var.proxmox_ssh_username
+    # Some settings are root@pam only, and an API token never counts as
+    # root@pam: the containers' /dev/net/tun passthrough and keyctl flag. With
+    # this, calls under /nodes/{node}/ use a short-lived root@pam ticket the
+    # provider mints over the root SSH login above; the rest keeps the token.
+    root_ticket = true
   }
 }

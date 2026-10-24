@@ -23,43 +23,54 @@
     name: nftables
     enabled: true
 
-- name: Read data disk filesystem
-  ansible.builtin.command: blkid -o value -s TYPE {{ home_assistant_data_device }}
-  register: home_assistant_data_fs
-  changed_when: false
-  check_mode: false
-  failed_when: home_assistant_data_fs.rc not in [0, 2]
+# In a container Proxmox formats and mounts the data volume itself.
+- name: Set up the data disk of a VM
+  when: guest_type | default('vm') == 'vm'
+  block:
+    - name: Read data disk filesystem
+      ansible.builtin.command: blkid -o value -s TYPE {{ home_assistant_data_device }}
+      register: home_assistant_data_fs
+      changed_when: false
+      check_mode: false
+      failed_when: home_assistant_data_fs.rc not in [0, 2]
 
-# Only ever formats an empty disk; blkid exits 2 when it finds no filesystem.
-- name: Format data disk
-  ansible.builtin.command: mkfs.ext4 -L ha-data {{ home_assistant_data_device }}
-  when: home_assistant_data_fs.rc == 2
-  changed_when: true
+    # Only ever formats an empty disk; blkid exits 2 when it finds no filesystem.
+    - name: Format data disk
+      ansible.builtin.command: mkfs.ext4 -L ha-data {{ home_assistant_data_device }}
+      when: home_assistant_data_fs.rc == 2
+      changed_when: true
 
-- name: Create data mount point
-  ansible.builtin.file:
-    path: "{{ home_assistant_data_dir }}"
-    state: directory
-    mode: "0755"
+    - name: Create data mount point
+      ansible.builtin.file:
+        path: "{{ home_assistant_data_dir }}"
+        state: directory
+        mode: "0755"
 
-- name: Add data disk to fstab
-  ansible.builtin.lineinfile:
-    path: /etc/fstab
-    regexp: "^\\S+\\s+{{ home_assistant_data_dir }}\\s"
-    line: "LABEL=ha-data {{ home_assistant_data_dir }} ext4 defaults,nofail 0 2"
+    - name: Add data disk to fstab
+      ansible.builtin.lineinfile:
+        path: /etc/fstab
+        regexp: "^\\S+\\s+{{ home_assistant_data_dir }}\\s"
+        line: "LABEL=ha-data {{ home_assistant_data_dir }} ext4 defaults,nofail 0 2"
 
-- name: Check data disk mount
+    - name: Check data disk mount
+      ansible.builtin.command: findmnt --mountpoint {{ home_assistant_data_dir }}
+      register: home_assistant_data_mount
+      changed_when: false
+      check_mode: false
+      failed_when: false
+
+    # ansible.posix.mount is not in ansible-core, which is all CI installs.
+    - name: Mount data disk  # noqa: command-instead-of-module
+      ansible.builtin.command: mount {{ home_assistant_data_dir }}
+      when: home_assistant_data_mount.rc != 0
+      changed_when: true
+
+# Never write config and data onto the root filesystem by mistake.
+- name: Check the data volume of a container
   ansible.builtin.command: findmnt --mountpoint {{ home_assistant_data_dir }}
-  register: home_assistant_data_mount
   changed_when: false
   check_mode: false
-  failed_when: false
-
-# ansible.posix.mount is not in ansible-core, which is all CI installs.
-- name: Mount data disk  # noqa: command-instead-of-module
-  ansible.builtin.command: mount {{ home_assistant_data_dir }}
-  when: home_assistant_data_mount.rc != 0
-  changed_when: true
+  when: guest_type | default('vm') == 'lxc'
 
 - name: Install deb822_repository dependency
   ansible.builtin.apt:
