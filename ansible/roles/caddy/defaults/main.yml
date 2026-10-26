@@ -31,3 +31,6 @@ caddy_routes:
   # Pulse's MetalLB address in k3s (pulse_load_balancer_ip in kubernetes-infrastructure).
   pulse:
     upstream: http://192.168.178.232:7655
+  # The finance app's MetalLB address in k3s (deploy/main.tf in Rutger505-Org/finance).
+  finance:
+    upstream: http://192.168.178.234:80
