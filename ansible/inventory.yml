@@ -41,11 +41,11 @@
 # IPv6: the modem only hands out addresses over DHCPv6, which the Debian VMs do
 # not use, so a host that needs a fixed IPv6 address sets ipv6_host: the
 # interface id in hex, appended to lan_ipv6_prefix (e.g. "53" =>
-# 2001:1c07:504:1d00::53). The prefix comes from Ziggo; if it ever changes,
+# 2001:1c07:589:7900::53). The prefix comes from Ziggo; if it ever changes,
 # update lan_ipv6_prefix and every address follows.
 all:
   vars:
-    lan_ipv6_prefix: 2001:1c07:504:1d00::/64
+    lan_ipv6_prefix: 2001:1c07:589:7900::/64
     ansible_user: debian
     # Exact contents of ~/.ssh/authorized_keys for ansible_user on every host
     # below; keys not listed here are removed on deploy. Also used by
@@ -165,7 +165,7 @@ all:
           ansible_host: 192.168.178.205
           ansible_user: root
           ansible_become: false
-          # 2001:1c07:504:1d00::53, set as IPv6 DNS server in the modem: it
+          # 2001:1c07:589:7900::53, set as IPv6 DNS server in the modem: it
           # refuses a private IPv4 address, and IPv6 clients would otherwise
           # bypass AdGuard Home.
           ipv6_host: "53"
