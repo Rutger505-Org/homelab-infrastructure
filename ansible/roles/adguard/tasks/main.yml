@@ -1,7 +1,7 @@
 - name: Check admin password hash
   ansible.builtin.assert:
     that:
-      - adguard_home_admin_password_hash is match('^[$]2[aby][$]')
+      - adguard_admin_password_hash is match('^[$]2[aby][$]')
     fail_msg: Set ADGUARD_ADMIN_PASSWORD_HASH to a bcrypt hash.
     quiet: true
   no_log: true
@@ -36,7 +36,7 @@
 
 - name: Disable resolved stub listener
   ansible.builtin.copy:
-    dest: /etc/systemd/resolved.conf.d/adguard-home.conf
+    dest: /etc/systemd/resolved.conf.d/adguard.conf
     content: |
       [Resolve]
       DNSStubListener=no
@@ -52,7 +52,7 @@
     name: adguardhome
     system: true
     shell: /usr/sbin/nologin
-    home: "{{ adguard_home_dir }}"
+    home: "{{ adguard_dir }}"
     create_home: false
 
 - name: Create directories
@@ -63,38 +63,38 @@
     group: "{{ item.owner }}"
     mode: "{{ item.mode }}"
   loop:
-    - { path: "/opt/adguard-home/{{ adguard_home_version }}", owner: root, mode: "0755" }
-    - { path: "{{ adguard_home_dir }}", owner: adguardhome, mode: "0750" }
+    - { path: "/opt/adguard/{{ adguard_version }}", owner: root, mode: "0755" }
+    - { path: "{{ adguard_dir }}", owner: adguardhome, mode: "0750" }
 
-# One directory per version, so bumping adguard_home_version installs and
+# One directory per version, so bumping adguard_version installs and
 # switches to the new binary and the old one stays around for a rollback.
 - name: Download AdGuard Home
   ansible.builtin.unarchive:
-    src: https://github.com/AdguardTeam/AdGuardHome/releases/download/{{ adguard_home_version }}/AdGuardHome_linux_amd64.tar.gz
-    dest: /opt/adguard-home/{{ adguard_home_version }}
+    src: https://github.com/AdguardTeam/AdGuardHome/releases/download/{{ adguard_version }}/AdGuardHome_linux_amd64.tar.gz
+    dest: /opt/adguard/{{ adguard_version }}
     remote_src: true
     # The archive holds ./AdGuardHome/AdGuardHome; the leading ./ makes
     # --strip-components unreliable, so keep the directory.
-    creates: /opt/adguard-home/{{ adguard_home_version }}/AdGuardHome/AdGuardHome
+    creates: /opt/adguard/{{ adguard_version }}/AdGuardHome/AdGuardHome
 
 - name: Link AdGuardHome binary
   ansible.builtin.file:
-    src: /opt/adguard-home/{{ adguard_home_version }}/AdGuardHome/AdGuardHome
+    src: /opt/adguard/{{ adguard_version }}/AdGuardHome/AdGuardHome
     dest: /usr/local/bin/AdGuardHome
     state: link
-  notify: Restart adguard-home
+  notify: Restart adguard
 
 # Seeded once: AdGuard Home fills in the defaults, migrates and rewrites this
 # file on every settings change, so it is never overwritten afterwards.
 - name: Seed config
   ansible.builtin.template:
     src: AdGuardHome.yaml.j2
-    dest: "{{ adguard_home_dir }}/AdGuardHome.yaml"
+    dest: "{{ adguard_dir }}/AdGuardHome.yaml"
     owner: adguardhome
     group: adguardhome
     mode: "0600"
     force: false
-  notify: Restart adguard-home
+  notify: Restart adguard
   no_log: true
 
 # Only the dhcp settings are Ansible's; everything else in the file stays as the
@@ -103,43 +103,61 @@
 # only when it differs, so a deploy without changes does not restart AdGuard Home.
 - name: Read config
   ansible.builtin.slurp:
-    src: "{{ adguard_home_dir }}/AdGuardHome.yaml"
-  register: adguard_home_config_file
+    src: "{{ adguard_dir }}/AdGuardHome.yaml"
+  register: adguard_config_file
   no_log: true
 
 - name: Write DHCP settings
   ansible.builtin.copy:
-    dest: "{{ adguard_home_dir }}/AdGuardHome.yaml"
-    content: "{{ adguard_home_config_new | to_nice_yaml(indent=2) }}"
+    dest: "{{ adguard_dir }}/AdGuardHome.yaml"
+    content: "{{ adguard_config_new | to_nice_yaml(indent=2) }}"
     owner: adguardhome
     group: adguardhome
     mode: "0600"
-  when: adguard_home_config_new != adguard_home_config
-  notify: Restart adguard-home
+  when: adguard_config_new != adguard_config
+  notify: Restart adguard
   no_log: true
   vars:
-    adguard_home_config: "{{ adguard_home_config_file.content | b64decode | from_yaml }}"
-    adguard_home_config_new: "{{ adguard_home_config | combine({'dhcp': adguard_home_dhcp}, recursive=true) }}"
-    adguard_home_dhcp:
+    adguard_config: "{{ adguard_config_file.content | b64decode | from_yaml }}"
+    adguard_config_new: "{{ adguard_config | combine({'dhcp': adguard_dhcp}, recursive=true) }}"
+    adguard_dhcp:
       interface_name: "{{ ansible_facts.default_ipv4.interface }}"
       local_domain_name: lan
       dhcpv4:
         gateway_ip: "{{ ansible_facts.default_ipv4.gateway }}"
         subnet_mask: "{{ ansible_facts.default_ipv4.netmask }}"
-        range_start: "{{ adguard_home_dhcp_range_start }}"
-        range_end: "{{ adguard_home_dhcp_range_end }}"
-        lease_duration: "{{ adguard_home_dhcp_lease_duration | int }}"
+        range_start: "{{ adguard_dhcp_range_start }}"
+        range_end: "{{ adguard_dhcp_range_end }}"
+        lease_duration: "{{ adguard_dhcp_lease_duration | int }}"
 
 - name: Write systemd unit
   ansible.builtin.template:
-    src: adguard-home.service.j2
-    dest: /etc/systemd/system/adguard-home.service
+    src: adguard.service.j2
+    dest: /etc/systemd/system/adguard.service
     mode: "0644"
-  notify: Restart adguard-home
+  notify: Restart adguard
 
-- name: Enable adguard-home
+# Renamed from adguard-home. Stop the old unit so it releases port 53 before
+# the new one starts. Remove once every host has been deployed.
+- name: Stop old adguard-home unit
   ansible.builtin.systemd_service:
     name: adguard-home
+    state: stopped
+    enabled: false
+  when: "'adguard-home.service' in ansible_facts.services"
+
+- name: Remove old adguard-home files
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/systemd/system/adguard-home.service
+    - /etc/systemd/resolved.conf.d/adguard-home.conf
+    - /opt/adguard-home
+
+- name: Enable adguard
+  ansible.builtin.systemd_service:
+    name: adguard
     enabled: true
     state: started
     daemon_reload: true
@@ -149,8 +167,8 @@
 
 - name: Wait for the web UI
   ansible.builtin.uri:
-    url: http://127.0.0.1:{{ adguard_home_web_port }}/login.html
-  register: adguard_home_web
+    url: http://127.0.0.1:{{ adguard_web_port }}/login.html
+  register: adguard_web
   retries: 15
   delay: 2
-  until: adguard_home_web.status == 200
+  until: adguard_web.status == 200
