@@ -12,19 +12,30 @@
 #   `ansible_become: false` (there is no sudo).
 # - no memory_min: memory is a limit, not a reservation (see below).
 # - data_disk_size needs data_disk_path, where Proxmox mounts the volume.
+#
+# Boot order: startup_order (lower starts first) and startup_up_delay
+# (seconds before the next guest starts), both optional. DNS starts first so
+# the other guests resolve on boot; after a node crash guests came up without
+# it.
+# - 1: adguard-home (DNS/DHCP)
+# - 2: tailscale, reverse-proxy
+# - 3: seaweedfs
+# - 4: k3s
+# - unset: the rest, after the ordered guests
 # - lxc_keyctl: true for Docker, lxc_devices for host devices (/dev/net/tun).
 #
 # Node memory: proxmox-lade has 16 GB, proxmox-prodesk 8 GB, and Proxmox
 # itself needs some of that. Every VM has a balloon device: `memory` is the
 # maximum, `memory_min` what Proxmox leaves the guest when the node runs
 # above 80% RAM. The `memory` sums may go over the node, the `memory_min`
-# sums must fit. k3s nodes keep a high minimum: the kubelet reads the node's
-# memory once at start and does not see the balloon, so a shrunk node gets
-# the guest OOM killer instead of pod evictions. A container's `memory` is a
+# sums must fit. k3s nodes set memory_min equal to memory, so they are never
+# ballooned: the kubelet reads the node's memory once at start and does not
+# see the balloon, so a shrunk node gets the guest OOM killer instead of pod
+# evictions. The OpenClaw VM is the one that gives memory back. A container's `memory` is a
 # cgroup limit: the node only gives it what its processes use, with no guest
 # kernel or page cache of its own on top.
-# - proxmox-lade: VMs memory 14 GB, memory_min 8.5 GB; containers 0.25 GB
-# - proxmox-prodesk: VMs memory 4 GB, memory_min 3 GB; containers 2.75 GB
+# - proxmox-lade: VMs memory 13 GB, memory_min 9.2 GB; containers 0.25 GB
+# - proxmox-prodesk: VMs memory 3.5 GB, memory_min 3.5 GB; containers 2.75 GB
 #
 # LAN addresses (192.168.178.x, static, outside the router's DHCP range):
 # - .199-.200: Proxmox nodes
@@ -62,9 +73,11 @@ all:
           # memory until the OOM killer stopped weed.
           cores: 3
           memory: 2048
-          memory_min: 512
+          # weed buffers large uploads in memory.
+          memory_min: 1024
           disk_size: 10
           data_disk_size: 60
+          startup_order: 3
     k3s_server:
       hosts:
         k3s-1:
@@ -72,10 +85,12 @@ all:
           vm_id: 911
           proxmox_node: proxmox-lade
           cores: 4
-          memory: 6144
-          memory_min: 4096
+          # Uses ~3 GB. Not ballooned, see the header.
+          memory: 5120
+          memory_min: 5120
           disk_size: 20
           data_disk_size: 0
+          startup_order: 4
     k3s_agent:
       hosts:
         k3s-2:
@@ -83,11 +98,13 @@ all:
           vm_id: 912
           proxmox_node: proxmox-prodesk
           cores: 4
-          # Less than k3s-1: prodesk only has 8 GB.
-          memory: 4096
-          memory_min: 3072
+          # Less than k3s-1: prodesk only has 8 GB. Uses ~1.5 GB. Not
+          # ballooned, see the header.
+          memory: 3584
+          memory_min: 3584
           disk_size: 20
           data_disk_size: 0
+          startup_order: 4
     tailscale_router:
       hosts:
         tailscale:
@@ -101,6 +118,7 @@ all:
           memory: 256
           disk_size: 4
           data_disk_size: 0
+          startup_order: 2
           lxc_devices:
             - /dev/net/tun
     openclaw_gateway:
@@ -113,7 +131,8 @@ all:
           ansible_user: openclaw
           cores: 4
           memory: 6144
-          memory_min: 4096
+          # The nodes' balloon buffer: gives memory back instead of k3s.
+          memory_min: 3072
           disk_size: 65
           data_disk_size: 0
           openclaw_gateway_enabled: true
@@ -150,6 +169,9 @@ all:
           memory: 512
           disk_size: 4
           data_disk_size: 0
+          # DNS for every other guest, so it starts first.
+          startup_order: 1
+          startup_up_delay: 15
     reverse_proxy:
       hosts:
         reverse-proxy:
@@ -163,3 +185,4 @@ all:
           memory: 256
           disk_size: 4
           data_disk_size: 0
+          startup_order: 2

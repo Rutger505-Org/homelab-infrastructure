@@ -104,3 +104,15 @@ variable "ssh_public_keys" {
   description = "Authorized keys for the login user"
   type        = list(string)
 }
+
+variable "startup_order" {
+  description = "Boot order on the node, lower starts first; null for no order"
+  type        = number
+  default     = null
+}
+
+variable "startup_delay" {
+  description = "Seconds to wait after starting this guest before the next one, null for none"
+  type        = number
+  default     = null
+}

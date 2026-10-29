@@ -66,6 +66,8 @@ module "vm" {
   memory_min     = each.value.memory_min
   disk_size      = each.value.disk_size
   data_disk_size = each.value.data_disk_size
+  startup_order  = try(each.value.startup_order, null)
+  startup_delay  = try(each.value.startup_up_delay, null)
 
   datastore_id         = var.datastore_id
   snippet_datastore_id = var.file_datastore_id
@@ -100,6 +102,8 @@ module "lxc" {
   data_disk_path = try(each.value.data_disk_path, null)
   keyctl         = try(each.value.lxc_keyctl, false)
   devices        = try(each.value.lxc_devices, [])
+  startup_order  = try(each.value.startup_order, null)
+  startup_delay  = try(each.value.startup_up_delay, null)
 
   datastore_id     = var.datastore_id
   template_file_id = proxmox_download_file.debian_lxc[each.value.proxmox_node].id

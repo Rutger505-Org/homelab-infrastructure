@@ -67,6 +67,16 @@ resource "proxmox_virtual_environment_vm" "this" {
     enabled = true
   }
 
+  # Boot order on the node: DNS first, so guests started after it resolve.
+  dynamic "startup" {
+    for_each = var.startup_order == null ? [] : [var.startup_order]
+
+    content {
+      order    = startup.value
+      up_delay = var.startup_delay
+    }
+  }
+
   cpu {
     cores = var.cores
     type  = "host"
