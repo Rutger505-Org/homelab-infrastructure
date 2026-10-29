@@ -9,7 +9,7 @@ Two Proxmox nodes running Debian VMs (OpenClaw: Arch) and LXC containers, all as
 - `ansible/playbook.yml`, `ansible/roles/<role>/`: configures each guest. Versions and settings in the role's `defaults/`.
 - `ansible/proxmox.yml`, `ansible/proxmox-inventory.yml`: the Proxmox nodes themselves (no-nag patch, tag colors), over root SSH. Separate inventory so OpenTofu never sees the nodes.
 - `dns/` (OpenTofu): every Cloudflare record of `rutgerpronk.com` and `rutgerpronk.nl`. Dashboard edits are drift and get reverted.
-- `internal-dns/` (OpenTofu): AdGuard rewrites (`homelab.rutgerpronk.com` and `*.homelab.rutgerpronk.com` → reverse proxy) and tailnet split DNS. Rewrites added in the web UI are left alone.
+- `internal-dns/` (OpenTofu): AdGuard rewrites (`homelab.rutgerpronk.com` and `*.homelab.rutgerpronk.com` → reverse proxy), the blocklist against DoH bypass (HaGeZi Encrypted DNS Bypass) and tailnet split DNS. Rewrites and lists added in the web UI are left alone.
 - `.github/workflows/`: `deploy.yaml`, `dns.yaml`, `internal-dns.yaml`, and the secrets/vars they need. `.github/deploy-services.yaml` maps changed paths to services.
 
 OpenTofu state is in the R2 bucket `homelab-tofu-state` (one key per root), encrypted with `TOFU_STATE_PASSPHRASE` (Bitwarden). Not in k3s, so it survives the cluster.
