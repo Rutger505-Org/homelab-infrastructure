@@ -23,6 +23,15 @@ resource "adguard_rewrite" "wildcard" {
   answer = local.reverse_proxy
 }
 
+# Blocks the encrypted DNS (DoH) endpoints browsers and apps use to go around
+# AdGuard Home, which would also skip the rewrites above. Only the client
+# queries are filtered: AdGuard Home's own DoH upstreams resolve through the
+# bootstrap servers.
+resource "adguard_list_filter" "encrypted_dns_bypass" {
+  name = "HaGeZi Encrypted DNS Bypass"
+  url  = "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists/adblock/doh.txt"
+}
+
 # Split DNS: tailnet devices ask AdGuard Home for homelab.rutgerpronk.com and
 # its subdomains, everything else keeps the device's own DNS. Away from home
 # the query reaches AdGuard Home through the subnet router, so the rewrite
