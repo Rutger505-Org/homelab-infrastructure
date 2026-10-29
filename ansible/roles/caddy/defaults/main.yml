@@ -4,8 +4,10 @@ caddy_version: "v2.11.7"
 caddy_download_url: "https://caddyserver.com/api/download?os=linux&arch=amd64&p=github.com%2Fcaddy-dns%2Fcloudflare&version={{ caddy_version }}"
 caddy_data_dir: /var/lib/caddy
 caddy_domain: homelab.rutgerpronk.com
-# Zone:DNS:Edit on rutgerpronk.com, for the DNS-01 challenge of the wildcard certificate.
-caddy_cloudflare_api_token: "{{ lookup('ansible.builtin.env', 'CLOUDFLARE_API_TOKEN') }}"
+# Own token with only Zone:DNS:Edit on rutgerpronk.com, for the DNS-01 challenge
+# of the wildcard certificate. It sits on the proxy, so a leak there cannot touch
+# rutgerpronk.nl or the redirect rules that the dns/ token can.
+caddy_cloudflare_api_token: "{{ lookup('ansible.builtin.env', 'CADDY_CLOUDFLARE_API_TOKEN') }}"
 
 # <name>.homelab.rutgerpronk.com => upstream. The bare domain serves a page
 # linking all of them.
