@@ -27,7 +27,7 @@
 # the guest OOM killer instead of pod evictions. A container's `memory` is a
 # cgroup limit: the node only gives it what its processes use, with no guest
 # kernel or page cache of its own on top.
-# - proxmox-lade: VMs memory 14 GB, memory_min 7.5 GB (plus 0.5/0.25 GB while
+# - proxmox-lade: VMs memory 14 GB, memory_min 8.5 GB (plus 0.5/0.25 GB while
 #   the retired tailscale VM runs); containers 0.25 GB
 # - proxmox-prodesk: VMs memory 4 GB, memory_min 3 GB; containers 2.75 GB
 #
@@ -130,7 +130,7 @@ all:
           ansible_user: openclaw
           cores: 4
           memory: 6144
-          memory_min: 3072
+          memory_min: 4096
           disk_size: 65
           data_disk_size: 0
           openclaw_gateway_enabled: true
