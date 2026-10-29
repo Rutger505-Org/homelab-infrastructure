@@ -7,25 +7,7 @@ locals {
   # A VM unless a host sets `guest_type: lxc`.
   guest_type = { for name, host in local.hosts : name => try(host.guest_type, "vm") }
   containers = { for name, host in local.hosts : name => host if local.guest_type[name] == "lxc" }
-
-  # Every VM host, plus the VM a container replaced while the inventory keeps
-  # it as `retired_vm`. Same key as before, so the VM stays in the state and
-  # retired_vm only has to repeat its specs; address and login default to the
-  # container's and the shared user.
-  vms = merge(
-    { for name, host in local.hosts : name => host if local.guest_type[name] == "vm" },
-    {
-      for name, host in local.containers : name => merge(
-        {
-          proxmox_node = host.proxmox_node
-          ansible_host = host.ansible_host
-          ansible_user = local.inventory.all.vars.ansible_user
-        },
-        try({ ipv6_host = host.ipv6_host }, {}),
-        host.retired_vm,
-      ) if try(host.retired_vm, null) != null
-    },
-  )
+  vms        = { for name, host in local.hosts : name => host if local.guest_type[name] == "vm" }
 
   proxmox_nodes = toset([for vm in values(local.vms) : vm.proxmox_node])
   lxc_nodes     = toset([for host in values(local.containers) : host.proxmox_node])
@@ -102,17 +84,11 @@ module "vm" {
 
   username        = try(each.value.ansible_user, local.inventory.all.vars.ansible_user)
   ssh_public_keys = local.inventory.all.vars.ssh_authorized_keys
-
-  started = try(each.value.started, true)
 }
 
 module "lxc" {
   source   = "./modules/lxc"
   for_each = local.containers
-
-  # A container can take over the address of the VM it replaces: stop that
-  # VM (retired_vm.started: false) before the container starts.
-  depends_on = [module.vm]
 
   name           = each.key
   vm_id          = each.value.vm_id
@@ -138,12 +114,4 @@ module "lxc" {
   )
 
   ssh_public_keys = local.inventory.all.vars.ssh_authorized_keys
-}
-
-# The SeaweedFS VM was called seaweedfs-server; the host is now seaweedfs and
-# its group object_storage, as a host and group with the same name clash in
-# Ansible. Keeps the VM instead of replacing it.
-moved {
-  from = module.vm["seaweedfs-server"]
-  to   = module.vm["seaweedfs"]
 }

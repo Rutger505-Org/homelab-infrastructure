@@ -13,10 +13,6 @@
 # - no memory_min: memory is a limit, not a reservation (see below).
 # - data_disk_size needs data_disk_path, where Proxmox mounts the volume.
 # - lxc_keyctl: true for Docker, lxc_devices for host devices (/dev/net/tun).
-# - retired_vm: the VM a container replaced, kept stopped with its disks for a
-#   rollback. Lists that VM's vm_id, cores, memory, memory_min, disk_size,
-#   data_disk_size and `started`; address and login default to the
-#   container's and the shared user. Ansible ignores it.
 #
 # Node memory: proxmox-lade has 16 GB, proxmox-prodesk 8 GB, and Proxmox
 # itself needs some of that. Every VM has a balloon device: `memory` is the
@@ -27,8 +23,7 @@
 # the guest OOM killer instead of pod evictions. A container's `memory` is a
 # cgroup limit: the node only gives it what its processes use, with no guest
 # kernel or page cache of its own on top.
-# - proxmox-lade: VMs memory 14 GB, memory_min 8.5 GB (plus 0.5/0.25 GB while
-#   the retired tailscale VM runs); containers 0.25 GB
+# - proxmox-lade: VMs memory 14 GB, memory_min 8.5 GB; containers 0.25 GB
 # - proxmox-prodesk: VMs memory 4 GB, memory_min 3 GB; containers 2.75 GB
 #
 # LAN addresses (192.168.178.x, static, outside the router's DHCP range):
@@ -97,9 +92,6 @@ all:
       hosts:
         tailscale:
           guest_type: lxc
-          # A new address: CI reaches the LAN through this router, so the old
-          # VM keeps running on .213 (a second router for the same route)
-          # until this one is up.
           ansible_host: 192.168.178.216
           ansible_user: root
           ansible_become: false
@@ -111,15 +103,6 @@ all:
           data_disk_size: 0
           lxc_devices:
             - /dev/net/tun
-          retired_vm:
-            ansible_host: 192.168.178.213
-            vm_id: 913
-            cores: 1
-            memory: 512
-            memory_min: 256
-            disk_size: 8
-            data_disk_size: 0
-            started: true
     openclaw_gateway:
       hosts:
         openclaw:
@@ -150,14 +133,6 @@ all:
           data_disk_size: 10
           data_disk_path: /srv/home-assistant
           lxc_keyctl: true
-          retired_vm:
-            vm_id: 905
-            cores: 2
-            memory: 2048
-            memory_min: 1024
-            disk_size: 16
-            data_disk_size: 10
-            started: false
     adguard_home:
       hosts:
         adguard-home:
@@ -175,14 +150,6 @@ all:
           memory: 512
           disk_size: 4
           data_disk_size: 0
-          retired_vm:
-            vm_id: 906
-            cores: 1
-            memory: 512
-            memory_min: 256
-            disk_size: 8
-            data_disk_size: 0
-            started: false
     reverse_proxy:
       hosts:
         reverse-proxy:
@@ -196,11 +163,3 @@ all:
           memory: 256
           disk_size: 4
           data_disk_size: 0
-          retired_vm:
-            vm_id: 907
-            cores: 1
-            memory: 512
-            memory_min: 256
-            disk_size: 8
-            data_disk_size: 0
-            started: false

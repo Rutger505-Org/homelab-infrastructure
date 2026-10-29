@@ -27,8 +27,8 @@ OpenTofu state is in the R2 bucket `homelab-tofu-state` (one key per root), encr
 - Add a VM: host in the inventory (all size fields required, no defaults; `memory_min` is the balloon floor, see the inventory header), a play in `playbook.yml`, the group in `deploy-services.yaml`. Optional `os: arch`, `ansible_user`.
 - VM or container: LAN-only services are unprivileged LXC containers (`guest_type: lxc`, see the inventory header), anything reachable from the internet stays a VM. Containers log in as root without sudo, so a role must not rely on `become` switching users. Docker needs `lxc_keyctl: true`, a TUN device `lxc_devices: [/dev/net/tun]`.
 - Both are root@pam only in Proxmox, which an API token never is: OpenTofu mints a root@pam ticket over its root SSH login for calls under `/nodes/` (`root_ticket` in `proxmox/providers.tf`).
-- Move a VM to a container: `guest_type: lxc` and a new `vm_id` on the host, the old specs under `retired_vm` with `started: false`. OpenTofu stops the VM before it creates the container, so the container can take over the address. Data does not move along: copy it over by hand (tar over SSH, then rerun the deploy). Rollback: `pct stop <ct>` and `qm start <vm>` on the node, then revert in git.
-- Rebuild a VM or container: `prevent_destroy` in `proxmox/modules/{vm,lxc}/main.tf` fails the run; remove it on purpose. Same for deleting a `retired_vm`.
+- Move a VM to a container: `guest_type: lxc` and a new `vm_id` on the host. Stop the old VM first if the container takes over its address, and copy data over by hand (tar over SSH, then rerun the deploy).
+- Rebuild a VM or container: `prevent_destroy` in `proxmox/modules/{vm,lxc}/main.tf` fails the run; remove it on purpose.
 - Changing `ansible_host`: new cloud-init instance id, so new address and new SSH host keys on next boot.
 - SSH keys: `ssh_authorized_keys` in the inventory is the exact `authorized_keys` on every VM; keep `homelab-ci`. Per host extras: `ssh_extra_authorized_keys`.
 - New `<service>.homelab.rutgerpronk.com`: an entry in `caddy_routes`, no DNS change; it also shows up on the `homelab.rutgerpronk.com` landing page. Some apps must trust the proxy (`192.168.178.207`):
@@ -40,7 +40,6 @@ OpenTofu state is in the R2 bucket `homelab-tofu-state` (one key per root), encr
 ## Manual and not automated
 
 - **No backups** (no vzdump/PBS). k3s PVCs live on the root disk and are lost on rebuild.
-- Retired VMs (`retired_vm` in the inventory) still take up disk and are not configured by Ansible anymore. Remove them once the container is known good.
 - A container that took over a VM's address has new SSH host keys: `ssh-keygen -R <address>` locally.
 - cloud-init only runs on first boot; changes reach new VMs only (SSH keys excepted).
 - AdGuard Home: the config is seeded once, then owned by the web UI, except the `dhcp` settings. DHCP is never switched on by a deploy: turn the modem's DHCP off and enable it in the web UI by hand (a rebuilt container starts with it off). If the container is down, turn modem DHCP back on. The modem's IPv6 DNS field must be `2001:1c07:589:7900::53`. Changing the password secret does not change a running instance.
