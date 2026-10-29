@@ -4,8 +4,8 @@ After=network-online.target
 Wants=network-online.target
 
 [Service]
-User=adguardhome
-Group=adguardhome
+User=adguard
+Group=adguard
 WorkingDirectory={{ adguard_dir }}
 # Version is pinned by Ansible, so the built-in updater stays off.
 ExecStart=/usr/local/bin/AdGuardHome \

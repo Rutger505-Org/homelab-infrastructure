@@ -1,5 +1,5 @@
 adguard_version: "v0.107.79"
-adguard_dir: /var/lib/adguardhome
+adguard_dir: /var/lib/adguard
 adguard_web_port: 80
 # Only used to seed the first config. AdGuard Home rewrites its config itself,
 # so after the first run settings are changed in the web UI, not here.

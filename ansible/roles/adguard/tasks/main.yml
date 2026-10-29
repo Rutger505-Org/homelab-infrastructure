@@ -47,9 +47,22 @@
 - name: Apply resolved change before AdGuard Home binds port 53
   ansible.builtin.meta: flush_handlers
 
-- name: Create adguardhome user
+# The CI dry run (--check) creates nothing, so on a fresh install the user,
+# directories, binary and unit the later tasks need do not exist yet. Skip
+# those tasks in check mode instead of failing on them.
+- name: Check for an existing install
+  ansible.builtin.stat:
+    path: /etc/systemd/system/adguard.service
+  register: adguard_unit_file
+
+- name: Check for the binary of this version
+  ansible.builtin.stat:
+    path: /opt/adguard/{{ adguard_version }}/AdGuardHome/AdGuardHome
+  register: adguard_binary
+
+- name: Create adguard user
   ansible.builtin.user:
-    name: adguardhome
+    name: adguard
     system: true
     shell: /usr/sbin/nologin
     home: "{{ adguard_dir }}"
@@ -62,9 +75,10 @@
     owner: "{{ item.owner }}"
     group: "{{ item.owner }}"
     mode: "{{ item.mode }}"
+  when: not ansible_check_mode or adguard_unit_file.stat.exists
   loop:
     - { path: "/opt/adguard/{{ adguard_version }}", owner: root, mode: "0755" }
-    - { path: "{{ adguard_dir }}", owner: adguardhome, mode: "0750" }
+    - { path: "{{ adguard_dir }}", owner: adguard, mode: "0750" }
 
 # One directory per version, so bumping adguard_version installs and
 # switches to the new binary and the old one stays around for a rollback.
@@ -76,12 +90,14 @@
     # The archive holds ./AdGuardHome/AdGuardHome; the leading ./ makes
     # --strip-components unreliable, so keep the directory.
     creates: /opt/adguard/{{ adguard_version }}/AdGuardHome/AdGuardHome
+  when: not ansible_check_mode or adguard_binary.stat.exists
 
 - name: Link AdGuardHome binary
   ansible.builtin.file:
     src: /opt/adguard/{{ adguard_version }}/AdGuardHome/AdGuardHome
     dest: /usr/local/bin/AdGuardHome
     state: link
+  when: not ansible_check_mode or adguard_binary.stat.exists
   notify: Restart adguard
 
 # Seeded once: AdGuard Home fills in the defaults, migrates and rewrites this
@@ -90,10 +106,11 @@
   ansible.builtin.template:
     src: AdGuardHome.yaml.j2
     dest: "{{ adguard_dir }}/AdGuardHome.yaml"
-    owner: adguardhome
-    group: adguardhome
+    owner: adguard
+    group: adguard
     mode: "0600"
     force: false
+  when: not ansible_check_mode or adguard_unit_file.stat.exists
   notify: Restart adguard
   no_log: true
 
@@ -105,16 +122,19 @@
   ansible.builtin.slurp:
     src: "{{ adguard_dir }}/AdGuardHome.yaml"
   register: adguard_config_file
+  when: not ansible_check_mode or adguard_unit_file.stat.exists
   no_log: true
 
 - name: Write DHCP settings
   ansible.builtin.copy:
     dest: "{{ adguard_dir }}/AdGuardHome.yaml"
     content: "{{ adguard_config_new | to_nice_yaml(indent=2) }}"
-    owner: adguardhome
-    group: adguardhome
+    owner: adguard
+    group: adguard
     mode: "0600"
-  when: adguard_config_new != adguard_config
+  when:
+    - adguard_config_file is not skipped
+    - adguard_config_new != adguard_config
   notify: Restart adguard
   no_log: true
   vars:
@@ -154,6 +174,12 @@
     - /etc/systemd/system/adguard-home.service
     - /etc/systemd/resolved.conf.d/adguard-home.conf
     - /opt/adguard-home
+    - /var/lib/adguardhome
+
+- name: Remove old adguardhome user
+  ansible.builtin.user:
+    name: adguardhome
+    state: absent
 
 - name: Enable adguard
   ansible.builtin.systemd_service:
@@ -161,6 +187,7 @@
     enabled: true
     state: started
     daemon_reload: true
+  when: not ansible_check_mode or adguard_unit_file.stat.exists
 
 - name: Apply changes before checking
   ansible.builtin.meta: flush_handlers
