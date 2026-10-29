@@ -27,8 +27,7 @@
 # the guest OOM killer instead of pod evictions. A container's `memory` is a
 # cgroup limit: the node only gives it what its processes use, with no guest
 # kernel or page cache of its own on top.
-# - proxmox-lade: VMs memory 14 GB, memory_min 8.5 GB (plus 0.5/0.25 GB while
-#   the retired tailscale VM runs); containers 0.25 GB
+# - proxmox-lade: VMs memory 14 GB, memory_min 8.5 GB; containers 0.25 GB
 # - proxmox-prodesk: VMs memory 4 GB, memory_min 3 GB; containers 2.75 GB
 #
 # LAN addresses (192.168.178.x, static, outside the router's DHCP range):
@@ -97,9 +96,9 @@ all:
       hosts:
         tailscale:
           guest_type: lxc
-          # A new address: CI reaches the LAN through this router, so the old
-          # VM keeps running on .213 (a second router for the same route)
-          # until this one is up.
+          # A new address: CI reaches the LAN through this router. The old VM
+          # on .213 ran as a second router for the same route until this one
+          # was up; now stopped, kept for a rollback.
           ansible_host: 192.168.178.216
           ansible_user: root
           ansible_become: false
@@ -119,7 +118,7 @@ all:
             memory_min: 256
             disk_size: 8
             data_disk_size: 0
-            started: true
+            started: false
     openclaw_gateway:
       hosts:
         openclaw:
