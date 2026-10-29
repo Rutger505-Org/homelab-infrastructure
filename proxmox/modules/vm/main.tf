@@ -63,11 +63,6 @@ resource "proxmox_virtual_environment_vm" "this" {
 
   stop_on_destroy = true
 
-  # A stopped VM must stay stopped across node reboots too: a retired VM
-  # shares its address with the container that replaced it.
-  started = var.started
-  on_boot = var.started
-
   agent {
     enabled = true
   }
