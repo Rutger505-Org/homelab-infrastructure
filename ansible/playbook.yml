@@ -99,10 +99,10 @@
     - home_assistant
 
 - name: Install AdGuard Home
-  hosts: adguard_home
+  hosts: adguard
   become: true
   roles:
-    - adguard_home
+    - adguard
 
 - name: Install reverse proxy
   hosts: reverse_proxy

@@ -18,7 +18,7 @@ table inet host_firewall {
     # firewall lets anything through. IPv4 is behind the modem's NAT.
     meta nfproto ipv4 meta l4proto { tcp, udp } th dport 53 accept
     meta l4proto { tcp, udp } th dport 53 ip6 saddr { fe80::/10, {{ lan_ipv6_prefix }} } accept
-    tcp dport {{ adguard_home_web_port }} accept
+    tcp dport {{ adguard_web_port }} accept
     udp dport 67 accept
   }
 }

@@ -8,8 +8,10 @@
     name: systemd-resolved
     state: restarted
 
-- name: Restart adguard-home
+- name: Restart adguard
   ansible.builtin.systemd_service:
-    name: adguard-home
+    name: adguard
     state: restarted
     daemon_reload: true
+  # The unit does not exist yet in a check-mode run of a fresh install.
+  when: not ansible_check_mode or adguard_unit_file.stat.exists
