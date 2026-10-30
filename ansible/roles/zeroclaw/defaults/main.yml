@@ -1,0 +1,14 @@
+# Throwaway prototype to try ZeroClaw as an alternative to OpenClaw.
+# Release archive: the zeroclaw binary plus the web dashboard in web/dist.
+zeroclaw_version: "0.8.7"
+zeroclaw_sha256: e10e6e4ba7bf8a081af4a8769d8c16ca3eb48e8e897eac42b94ca4335b120a34
+zeroclaw_download_url: https://github.com/zeroclaw-labs/zeroclaw/releases/download/v{{ zeroclaw_version }}/zeroclaw-x86_64-unknown-linux-gnu.tar.gz
+# Home of the zeroclaw user; config, memory and sessions live in ~/.zeroclaw.
+zeroclaw_home: /var/lib/zeroclaw
+zeroclaw_gateway_port: 42617
+# Tools the agent's shell tool can use.
+zeroclaw_packages:
+  - ca-certificates
+  - curl
+  - git
+  - jq

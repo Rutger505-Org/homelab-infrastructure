@@ -21,6 +21,8 @@ caddy_routes:
     upstream: http://192.168.178.206:80
   openclaw:
     upstream: http://192.168.178.210:18789
+  zeroclaw:
+    upstream: http://192.168.178.218:42617
   proxmox-lade:
     upstream: https://192.168.178.200:8006
     insecure_tls: true

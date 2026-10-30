@@ -109,3 +109,8 @@
   become: true
   roles:
     - caddy
+
+- name: Install ZeroClaw
+  hosts: zeroclaw_gateway
+  roles:
+    - zeroclaw
