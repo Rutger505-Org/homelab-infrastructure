@@ -33,17 +33,12 @@
 # the guest OOM killer instead of pod evictions. A container's `memory` is a
 # cgroup limit: the node only gives it what its processes use, with no guest
 # kernel or page cache of its own on top.
-
-# conflicts happened here, not yet foxed fix this
-# - proxmox-lade: VMs memory 11 GB, memory_min 8.5 GB; containers 0.75 GB
-# - proxmox-prodesk: VMs memory 3.5 GB, memory_min 3 GB; containers 3 GB
+# - proxmox-lade: VMs memory 11 GB, memory_min 10 GB; containers 0.75 GB
+# - proxmox-prodesk: VMs memory 5.5 GB, memory_min 3.5 GB; containers 3 GB
 #
 # Redundancy: DNS/DHCP (adguard) and the Tailscale subnet router run once on
 # each node, so either node can go down without taking the LAN's DNS or the
 # tailnet route with it.
-# - proxmox-lade: VMs memory 11 GB, memory_min 8 GB; containers 0.25 GB
-# - proxmox-prodesk: VMs memory 5.5 GB, memory_min 3.5 GB; containers 2.75 GB
-
 #
 # LAN addresses (192.168.178.x, static, outside the router's DHCP range):
 # - .199-.200: Proxmox nodes
@@ -151,8 +146,11 @@ all:
           os: arch
           ansible_user: openclaw
           cores: 4
+          # No balloon headroom: the gateway plus the Fastify Android emulator
+          # and Gradle builds need all 6 GB; at 4 GB the guest swapped and the
+          # OOM killer stopped the emulator.
           memory: 6144
-          memory_min: 4096
+          memory_min: 6144
           disk_size: 65
           data_disk_size: 0
           openclaw_gateway_enabled: true
