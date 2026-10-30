@@ -120,8 +120,14 @@ module "lxc" {
   ssh_public_keys = local.inventory.all.vars.ssh_authorized_keys
 }
 
-# Renamed from adguard-home; keep the container instead of recreating it.
+# Renamed from adguard-home, then adguard; keep the container instead of
+# recreating it.
 moved {
   from = module.lxc["adguard-home"]
   to   = module.lxc["adguard"]
+}
+
+moved {
+  from = module.lxc["adguard"]
+  to   = module.lxc["adguard-1"]
 }
