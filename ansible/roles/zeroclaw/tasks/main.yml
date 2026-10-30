@@ -1,8 +1,9 @@
+# Arch only supports full upgrades, so installing always upgrades too.
 - name: Install packages
-  ansible.builtin.apt:
-    name: "{{ zeroclaw_packages + ['nftables'] }}"
-    update_cache: true
-    cache_valid_time: 3600
+  ansible.builtin.command:
+    argv: "{{ ['pacman', '-Syu', '--needed', '--noconfirm', 'nftables'] + zeroclaw_packages }}"
+  register: zeroclaw_pacman
+  changed_when: "'there is nothing to do' not in zeroclaw_pacman.stdout"
 
 # The gateway listens on all addresses so Caddy can reach it, and trusts its
 # X-Forwarded-For. Only the reverse proxy may connect, so nobody else can
@@ -19,14 +20,15 @@
     name: nftables
     enabled: true
 
-# Not root: the agent runs shell commands as this user.
-- name: Create zeroclaw user
-  ansible.builtin.user:
-    name: zeroclaw
-    system: true
-    shell: /bin/bash
-    home: "{{ zeroclaw_home }}"
-    create_home: true
+# The daemon runs as the login user from cloud-init, like OpenClaw on its VM.
+- name: Read the login user's home
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ zeroclaw_user }}"
+
+- name: Set paths
+  ansible.builtin.set_fact:
+    zeroclaw_home: "{{ ansible_facts.getent_passwd[zeroclaw_user][4] }}"
 
 - name: Create install directory
   ansible.builtin.file:

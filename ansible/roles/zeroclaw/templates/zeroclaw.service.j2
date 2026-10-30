@@ -4,8 +4,7 @@ After=network-online.target
 Wants=network-online.target
 
 [Service]
-User=zeroclaw
-Group=zeroclaw
+User={{ zeroclaw_user }}
 WorkingDirectory={{ zeroclaw_home }}
 Environment=HOME={{ zeroclaw_home }}
 # Env overrides of ~/.zeroclaw/config.toml, never written to it: the dashboard

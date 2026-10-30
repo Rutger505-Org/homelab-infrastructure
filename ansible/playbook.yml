@@ -112,5 +112,6 @@
 
 - name: Install ZeroClaw
   hosts: zeroclaw_gateway
+  become: true
   roles:
     - zeroclaw
