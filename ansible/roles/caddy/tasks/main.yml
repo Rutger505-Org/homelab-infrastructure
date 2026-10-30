@@ -2,7 +2,7 @@
   ansible.builtin.assert:
     that:
       - caddy_cloudflare_api_token | length > 0
-    fail_msg: Set CLOUDFLARE_API_TOKEN.
+    fail_msg: Set CADDY_CLOUDFLARE_API_TOKEN.
     quiet: true
   no_log: true
 

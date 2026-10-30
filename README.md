@@ -72,13 +72,16 @@ ssh debian@192.168.178.201 'base64 -w0 k3s-ca.tar.gz && rm k3s-ca.tar.gz' \
 - Enable `Snippets` and `Import` content on the `local` storage.
 - `ssh-keygen -t ed25519 -f homelab-ci -C homelab-ci`; public key in `/root/.ssh/authorized_keys` on both nodes (OpenTofu uploads snippets over SSH), private key as `HOMELAB_SSH_PRIVATE_KEY`.
 - R2 bucket `homelab-tofu-state` with an Object Read & Write token; state passphrase of 16+ characters.
+- Tailscale: `tag:ci-homelab` in `tagOwners`. OAuth clients: CI (`auth_keys` write, `tag:ci-homelab`), router (`auth_keys` write, `tag:homelab`, never expires so a rebuild can rejoin), DNS (`dns` write). ACLs: `tag:ci-homelab` → `192.168.178.0/24` ports 22, 8006 and `192.168.178.205:80`; own devices → `192.168.178.205:53`, `192.168.178.207:443`.
+- Cloudflare token with `Zone:DNS:Edit`, `Zone:Single Redirect:Edit`, `Zone:Zone:Read` on both zones → `CLOUDFLARE_DNS_API_TOKEN`, for `dns/`.
+- Cloudflare token with only `Zone:DNS:Edit` on `rutgerpronk.com` → `CADDY_CLOUDFLARE_API_TOKEN`, for the reverse proxy's DNS-01 challenge.
 - Tailscale: `tag:ci-homelab` in `tagOwners`. OAuth clients: CI (`auth_keys` write, `tag:ci-homelab`), router (`auth_keys` write, `tag:homelab`, never expires so a rebuild can rejoin), DNS (`dns` write). ACLs: `tag:ci-homelab` → `192.168.178.0/24` ports 22, 8006 and `192.168.178.205:80`, `192.168.178.206:80`; own devices → `192.168.178.205:53`, `192.168.178.206:53`, `192.168.178.207:443`.
 - Cloudflare token with `Zone:DNS:Edit`, `Zone:Single Redirect:Edit`, `Zone:Zone:Read` on both zones → `CLOUDFLARE_DNS_API_TOKEN` (also the reverse proxy's DNS-01 challenge).
 - Secrets with a non-obvious value: `K3S_TOKEN` (`openssl rand -hex 32`), `ADGUARD_ADMIN_PASSWORD_HASH` (`htpasswd -nbBC 10 "" <password> | tr -d ':\n'`, plain text in `ADGUARD_ADMIN_PASSWORD`), `OPENCLAW_READONLY_KUBECONFIG` (kubernetes-infrastructure `4-rbac`), `OPENCLAW_ENV` (`~/.openclaw/.env`).
 
 ## Running locally
 
-When CI can't reach the LAN. From the LAN, with your SSH key in the agent and on the Proxmox nodes: export the `env:` blocks of `deploy.yaml` (R2 keys as `AWS_*`, `TF_VAR_state_passphrase`, `PROXMOX_VE_*`, the service secrets under the same names, `CLOUDFLARE_API_TOKEN`), then:
+When CI can't reach the LAN. From the LAN, with your SSH key in the agent and on the Proxmox nodes: export the `env:` blocks of `deploy.yaml` (R2 keys as `AWS_*`, `TF_VAR_state_passphrase`, `PROXMOX_VE_*`, the service secrets under the same names), then:
 
 ```bash
 tofu -chdir=proxmox init && tofu -chdir=proxmox apply
