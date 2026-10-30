@@ -33,12 +33,17 @@
 # the guest OOM killer instead of pod evictions. A container's `memory` is a
 # cgroup limit: the node only gives it what its processes use, with no guest
 # kernel or page cache of its own on top.
-# - proxmox-lade: VMs memory 13 GB, memory_min 8.5 GB; containers 0.75 GB
+
+# conflicts happened here, not yet foxed fix this
+# - proxmox-lade: VMs memory 11 GB, memory_min 8.5 GB; containers 0.75 GB
 # - proxmox-prodesk: VMs memory 3.5 GB, memory_min 3 GB; containers 3 GB
 #
 # Redundancy: DNS/DHCP (adguard) and the Tailscale subnet router run once on
 # each node, so either node can go down without taking the LAN's DNS or the
 # tailnet route with it.
+# - proxmox-lade: VMs memory 11 GB, memory_min 8 GB; containers 0.25 GB
+# - proxmox-prodesk: VMs memory 5.5 GB, memory_min 3.5 GB; containers 2.75 GB
+
 #
 # LAN addresses (192.168.178.x, static, outside the router's DHCP range):
 # - .199-.200: Proxmox nodes
@@ -70,7 +75,7 @@ all:
         seaweedfs:
           ansible_host: 192.168.178.214
           vm_id: 904
-          proxmox_node: proxmox-lade
+          proxmox_node: proxmox-prodesk
           # A single core could not keep up with a large upload: the volume
           # server stopped answering, chunk uploads timed out and piled up in
           # memory until the OOM killer stopped weed.

@@ -63,6 +63,10 @@ resource "proxmox_virtual_environment_vm" "this" {
 
   stop_on_destroy = true
 
+  # A changed node_name migrates the VM, disks included, instead of
+  # replacing it (which prevent_destroy below refuses anyway).
+  migrate = true
+
   agent {
     enabled = true
   }
