@@ -9,3 +9,9 @@ variable "adguard_host" {
   type        = string
   default     = "192.168.178.205"
 }
+
+variable "adguard_2_host" {
+  description = "Second AdGuard Home web UI address as host[:port]"
+  type        = string
+  default     = "192.168.178.206"
+}

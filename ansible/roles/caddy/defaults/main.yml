@@ -15,6 +15,8 @@ caddy_cloudflare_api_token: "{{ lookup('ansible.builtin.env', 'CLOUDFLARE_API_TO
 caddy_routes:
   adguard:
     upstream: http://192.168.178.205:80
+  adguard-2:
+    upstream: http://192.168.178.206:80
   openclaw:
     upstream: http://192.168.178.210:18789
   proxmox-lade:

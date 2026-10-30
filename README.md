@@ -9,7 +9,7 @@ Two Proxmox nodes running Debian VMs (OpenClaw: Arch) and LXC containers, all as
 - `ansible/playbook.yml`, `ansible/roles/<role>/`: configures each guest. Versions and settings in the role's `defaults/`.
 - `ansible/proxmox.yml`, `ansible/proxmox-inventory.yml`: the Proxmox nodes themselves (no-nag patch, tag colors), over root SSH. Separate inventory so OpenTofu never sees the nodes.
 - `dns/` (OpenTofu): every Cloudflare record of `rutgerpronk.com` and `rutgerpronk.nl`. Dashboard edits are drift and get reverted.
-- `internal-dns/` (OpenTofu): AdGuard rewrites (`homelab.rutgerpronk.com` and `*.homelab.rutgerpronk.com` → reverse proxy), the blocklist against DoH bypass (HaGeZi Encrypted DNS Bypass) and tailnet split DNS. Rewrites and lists added in the web UI are left alone.
+- `internal-dns/` (OpenTofu): on both AdGuard instances (`adguard`, `adguard-2`), AdGuard rewrites (`homelab.rutgerpronk.com` and `*.homelab.rutgerpronk.com` → reverse proxy), the blocklist against DoH bypass (HaGeZi Encrypted DNS Bypass) and tailnet split DNS. Rewrites and lists added in the web UI are left alone.
 - `.github/workflows/`: `deploy.yaml`, `dns.yaml`, `internal-dns.yaml`, and the secrets/vars they need. `.github/deploy-services.yaml` maps changed paths to services.
 
 OpenTofu state is in the R2 bucket `homelab-tofu-state` (one key per root), encrypted with `TOFU_STATE_PASSPHRASE` (Bitwarden). Not in k3s, so it survives the cluster.
@@ -19,7 +19,7 @@ OpenTofu state is in the R2 bucket `homelab-tofu-state` (one key per root), encr
 - PR: `tofu plan` and `ansible-playbook --check --diff` against the live VMs (VMs the PR adds are skipped). Push to main: apply. A manual run deploys every service, e.g. to undo manual changes.
 - One Ansible job per service, limited to its inventory group. A `shared` path deploys all services.
 - Check mode skips commands, so read-only probes need `check_mode: false`, otherwise later tasks report fake changes.
-- CI joins the tailnet as `tag:ci-homelab` and reaches the LAN through the `tailscale` subnet router. Router down: run locally.
+- CI joins the tailnet as `tag:ci-homelab` and reaches the LAN through the `tailscale` or `tailscale-2` subnet router (one per node, same route; Tailscale fails over between them). Both down: run locally.
 - `internal-dns` also applies after every successful deploy, so a rebuilt AdGuard container gets its rewrites back.
 
 ## Common changes
@@ -42,7 +42,7 @@ OpenTofu state is in the R2 bucket `homelab-tofu-state` (one key per root), encr
 - **No backups** (no vzdump/PBS). k3s PVCs live on the root disk and are lost on rebuild.
 - A container that took over a VM's address has new SSH host keys: `ssh-keygen -R <address>` locally.
 - cloud-init only runs on first boot; changes reach new VMs only (SSH keys excepted).
-- AdGuard Home: the config is seeded once, then owned by the web UI, except the `dhcp` settings. DHCP is never switched on by a deploy: turn the modem's DHCP off and enable it in the web UI by hand (a rebuilt container starts with it off). If the container is down, turn modem DHCP back on. The modem's IPv6 DNS field must be `2001:1c07:589:7900::53`. Changing the password secret does not change a running instance.
+- AdGuard Home: two instances, `adguard` (prodesk) and `adguard-2` (lade). The config is seeded once, then owned by each web UI, except the `dhcp` settings (each leases its own half of the pool, both hand out both DNS servers). Web UI settings are not synced between them: change both, or put it in `internal-dns/`. DHCP is never switched on by a deploy: turn the modem's DHCP off and enable it in both web UIs by hand (a rebuilt container starts with it off). If both are down, turn modem DHCP back on. The modem's IPv6 DNS fields must be `2001:1c07:589:7900::53` and `::54`. Changing the password secret does not change a running instance.
 - Home Assistant: onboarding creates the owner; add the MQTT integration with broker `localhost`. Proxy trust in the UI (HTTP server) gets overwritten by the role; other HTTP server settings stay. The role fails on an unknown `.storage/http` version after an HA upgrade: check the format, bump the expected version.
 - OpenClaw VM: run dev-env's `install.sh` by hand. `.env` is only written when missing, so keep `OPENCLAW_ENV` up to date. State outside the config repo (sessions, memory, channel credentials) is not backed up. Set `openclaw_gateway_enabled: false` before running a second Gateway with the same state, or both answer.
 - Grafana is LAN only: Caddy is its only route in, to its MetalLB address `.231`.
@@ -72,7 +72,7 @@ ssh debian@192.168.178.201 'base64 -w0 k3s-ca.tar.gz && rm k3s-ca.tar.gz' \
 - Enable `Snippets` and `Import` content on the `local` storage.
 - `ssh-keygen -t ed25519 -f homelab-ci -C homelab-ci`; public key in `/root/.ssh/authorized_keys` on both nodes (OpenTofu uploads snippets over SSH), private key as `HOMELAB_SSH_PRIVATE_KEY`.
 - R2 bucket `homelab-tofu-state` with an Object Read & Write token; state passphrase of 16+ characters.
-- Tailscale: `tag:ci-homelab` in `tagOwners`. OAuth clients: CI (`auth_keys` write, `tag:ci-homelab`), router (`auth_keys` write, `tag:homelab`, never expires so a rebuild can rejoin), DNS (`dns` write). ACLs: `tag:ci-homelab` → `192.168.178.0/24` ports 22, 8006 and `192.168.178.205:80`; own devices → `192.168.178.205:53`, `192.168.178.207:443`.
+- Tailscale: `tag:ci-homelab` in `tagOwners`. OAuth clients: CI (`auth_keys` write, `tag:ci-homelab`), router (`auth_keys` write, `tag:homelab`, never expires so a rebuild can rejoin), DNS (`dns` write). ACLs: `tag:ci-homelab` → `192.168.178.0/24` ports 22, 8006 and `192.168.178.205:80`, `192.168.178.206:80`; own devices → `192.168.178.205:53`, `192.168.178.206:53`, `192.168.178.207:443`.
 - Cloudflare token with `Zone:DNS:Edit`, `Zone:Single Redirect:Edit`, `Zone:Zone:Read` on both zones → `CLOUDFLARE_DNS_API_TOKEN` (also the reverse proxy's DNS-01 challenge).
 - Secrets with a non-obvious value: `K3S_TOKEN` (`openssl rand -hex 32`), `ADGUARD_ADMIN_PASSWORD_HASH` (`htpasswd -nbBC 10 "" <password> | tr -d ':\n'`, plain text in `ADGUARD_ADMIN_PASSWORD`), `OPENCLAW_READONLY_KUBECONFIG` (kubernetes-infrastructure `4-rbac`), `OPENCLAW_ENV` (`~/.openclaw/.env`).
 

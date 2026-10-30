@@ -149,6 +149,9 @@
         range_start: "{{ adguard_dhcp_range_start }}"
         range_end: "{{ adguard_dhcp_range_end }}"
         lease_duration: "{{ adguard_dhcp_lease_duration | int }}"
+        # Option 6: DNS servers. Without it a lease only names this instance.
+        options:
+          - "6 ips {{ adguard_dhcp_dns_servers | join(',') }}"
 
 - name: Write systemd unit
   ansible.builtin.template:

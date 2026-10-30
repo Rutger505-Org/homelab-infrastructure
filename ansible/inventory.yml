@@ -17,8 +17,8 @@
 # (seconds before the next guest starts), both optional. DNS starts first so
 # the other guests resolve on boot; after a node crash guests came up without
 # it.
-# - 1: adguard-home (DNS/DHCP)
-# - 2: tailscale, reverse-proxy
+# - 1: adguard, adguard-2 (DNS/DHCP)
+# - 2: tailscale, tailscale-2, reverse-proxy
 # - 3: seaweedfs
 # - 4: k3s
 # - unset: the rest, after the ordered guests
@@ -33,8 +33,17 @@
 # the guest OOM killer instead of pod evictions. A container's `memory` is a
 # cgroup limit: the node only gives it what its processes use, with no guest
 # kernel or page cache of its own on top.
+
+# conflicts happened here, not yet foxed fix this
+# - proxmox-lade: VMs memory 11 GB, memory_min 8.5 GB; containers 0.75 GB
+# - proxmox-prodesk: VMs memory 3.5 GB, memory_min 3 GB; containers 3 GB
+#
+# Redundancy: DNS/DHCP (adguard) and the Tailscale subnet router run once on
+# each node, so either node can go down without taking the LAN's DNS or the
+# tailnet route with it.
 # - proxmox-lade: VMs memory 11 GB, memory_min 8 GB; containers 0.25 GB
 # - proxmox-prodesk: VMs memory 5.5 GB, memory_min 3.5 GB; containers 2.75 GB
+
 #
 # LAN addresses (192.168.178.x, static, outside the router's DHCP range):
 # - .199-.200: Proxmox nodes
@@ -117,6 +126,22 @@ all:
           startup_order: 2
           lxc_devices:
             - /dev/net/tun
+        # Second router on the other node, advertising the same route.
+        # Tailscale fails over to it when the primary goes offline.
+        tailscale-2:
+          guest_type: lxc
+          ansible_host: 192.168.178.217
+          ansible_user: root
+          ansible_become: false
+          vm_id: 924
+          proxmox_node: proxmox-prodesk
+          cores: 1
+          memory: 256
+          disk_size: 4
+          data_disk_size: 0
+          startup_order: 2
+          lxc_devices:
+            - /dev/net/tun
     openclaw_gateway:
       hosts:
         openclaw:
@@ -167,6 +192,28 @@ all:
           # DNS for every other guest, so it starts first.
           startup_order: 1
           startup_up_delay: 15
+          # Each instance leases its own half of the pool, so the two never
+          # hand out the same address (AdGuard Home has no DHCP failover).
+          adguard_dhcp_range_start: 192.168.178.20
+          adguard_dhcp_range_end: 192.168.178.100
+        # Second DNS/DHCP server on the other node.
+        adguard-2:
+          guest_type: lxc
+          ansible_host: 192.168.178.206
+          ansible_user: root
+          ansible_become: false
+          # 2001:1c07:589:7900::54, the modem's secondary IPv6 DNS server.
+          ipv6_host: "54"
+          vm_id: 928
+          proxmox_node: proxmox-lade
+          cores: 1
+          memory: 512
+          disk_size: 4
+          data_disk_size: 0
+          startup_order: 1
+          startup_up_delay: 15
+          adguard_dhcp_range_start: 192.168.178.101
+          adguard_dhcp_range_end: 192.168.178.180
     reverse_proxy:
       hosts:
         reverse-proxy:
