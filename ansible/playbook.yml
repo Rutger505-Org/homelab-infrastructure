@@ -99,7 +99,7 @@
     - home_assistant
 
 - name: Install AdGuard Home
-  hosts: adguard
+  hosts: adguard_home
   become: true
   roles:
     - adguard

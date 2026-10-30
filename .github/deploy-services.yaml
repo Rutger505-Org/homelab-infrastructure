@@ -32,7 +32,7 @@ home_assistant:
   - *shared
   - ansible/roles/home_assistant/**
 
-adguard:
+adguard_home:
   - *shared
   - ansible/roles/adguard/**
 

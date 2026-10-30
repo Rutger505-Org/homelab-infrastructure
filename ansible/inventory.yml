@@ -172,7 +172,9 @@ all:
           data_disk_size: 10
           data_disk_path: /srv/home-assistant
           lxc_keyctl: true
-    adguard:
+    # Not "adguard": a group named like one of its hosts makes --limit pick
+    # only the host, so deploys skipped adguard-2.
+    adguard_home:
       hosts:
         adguard:
           guest_type: lxc

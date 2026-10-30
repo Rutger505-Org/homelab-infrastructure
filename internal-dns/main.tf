@@ -9,7 +9,7 @@ locals {
   reverse_proxy = "192.168.178.207"
 }
 
-# Both AdGuard Home instances (the adguard group in ansible/inventory.yml)
+# Both AdGuard Home instances (the adguard_home group in ansible/inventory.yml)
 # get the same rewrites and lists: DHCP clients use either one.
 module "adguard" {
   source = "./modules/adguard"
