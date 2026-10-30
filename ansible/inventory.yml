@@ -17,7 +17,7 @@
 # (seconds before the next guest starts), both optional. DNS starts first so
 # the other guests resolve on boot; after a node crash guests came up without
 # it.
-# - 1: adguard, adguard-2 (DNS/DHCP)
+# - 1: adguard-1, adguard-2 (DNS/DHCP)
 # - 2: tailscale, tailscale-2, reverse-proxy
 # - 3: seaweedfs
 # - 4: k3s
@@ -172,11 +172,11 @@ all:
           data_disk_size: 10
           data_disk_path: /srv/home-assistant
           lxc_keyctl: true
-    # Not "adguard": a group named like one of its hosts makes --limit pick
-    # only the host, so deploys skipped adguard-2.
-    adguard_home:
+    # No host may be called "adguard" too: --limit then picks only that host
+    # instead of the group, and deploys skipped adguard-2.
+    adguard:
       hosts:
-        adguard:
+        adguard-1:
           guest_type: lxc
           ansible_host: 192.168.178.205
           ansible_user: root
