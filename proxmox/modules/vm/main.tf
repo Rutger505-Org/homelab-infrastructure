@@ -63,8 +63,22 @@ resource "proxmox_virtual_environment_vm" "this" {
 
   stop_on_destroy = true
 
+  # A changed node_name migrates the VM, disks included, instead of
+  # replacing it (which prevent_destroy below refuses anyway).
+  migrate = true
+
   agent {
     enabled = true
+  }
+
+  # Boot order on the node: DNS first, so guests started after it resolve.
+  dynamic "startup" {
+    for_each = var.startup_order == null ? [] : [var.startup_order]
+
+    content {
+      order    = startup.value
+      up_delay = var.startup_delay
+    }
   }
 
   cpu {

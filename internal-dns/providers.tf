@@ -5,6 +5,14 @@ provider "adguard" {
   scheme   = "http"
 }
 
+# The second instance, same password.
+provider "adguard" {
+  alias    = "adguard_2"
+  host     = var.adguard_2_host
+  username = "admin"
+  scheme   = "http"
+}
+
 # Tailnet DNS settings. OAuth client from TAILSCALE_OAUTH_CLIENT_ID and
 # TAILSCALE_OAUTH_CLIENT_SECRET, with the dns scope; tailnet "-" is the
 # client's own tailnet.

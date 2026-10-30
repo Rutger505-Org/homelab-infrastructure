@@ -4,13 +4,13 @@ After=network-online.target
 Wants=network-online.target
 
 [Service]
-User=adguardhome
-Group=adguardhome
-WorkingDirectory={{ adguard_home_dir }}
+User=adguard
+Group=adguard
+WorkingDirectory={{ adguard_dir }}
 # Version is pinned by Ansible, so the built-in updater stays off.
 ExecStart=/usr/local/bin/AdGuardHome \
-  --config {{ adguard_home_dir }}/AdGuardHome.yaml \
-  --work-dir {{ adguard_home_dir }} \
+  --config {{ adguard_dir }}/AdGuardHome.yaml \
+  --work-dir {{ adguard_dir }} \
   --no-check-update
 Restart=on-failure
 RestartSec=5
@@ -21,7 +21,7 @@ NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=true
 PrivateTmp=true
-ReadWritePaths={{ adguard_home_dir }}
+ReadWritePaths={{ adguard_dir }}
 
 [Install]
 WantedBy=multi-user.target

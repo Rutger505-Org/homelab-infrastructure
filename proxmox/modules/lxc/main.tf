@@ -19,6 +19,16 @@ resource "proxmox_virtual_environment_container" "this" {
   started       = true
   start_on_boot = true
 
+  # Boot order on the node: DNS first, so guests started after it resolve.
+  dynamic "startup" {
+    for_each = var.startup_order == null ? [] : [var.startup_order]
+
+    content {
+      order    = startup.value
+      up_delay = var.startup_delay
+    }
+  }
+
   features {
     # systemd in Debian 13 needs it for its sandboxing (ProtectSystem,
     # PrivateTmp) and Docker for its own containers.
