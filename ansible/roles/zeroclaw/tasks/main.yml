@@ -1,0 +1,87 @@
+# Arch only supports full upgrades, so installing always upgrades too.
+- name: Install packages
+  ansible.builtin.command:
+    argv: "{{ ['pacman', '-Syu', '--needed', '--noconfirm', 'nftables'] + zeroclaw_packages }}"
+  register: zeroclaw_pacman
+  changed_when: "'there is nothing to do' not in zeroclaw_pacman.stdout"
+
+# An upgraded kernel package removes the running kernel's modules, so nft
+# cannot load nf_tables until a reboot. Happens on the first deploy: cloud-init
+# upgrades the fresh VM.
+- name: Check the running kernel's modules
+  ansible.builtin.stat:
+    path: /usr/lib/modules/{{ ansible_facts.kernel }}
+  register: zeroclaw_kernel_modules
+
+- name: Reboot into the upgraded kernel
+  ansible.builtin.reboot:
+  when: not zeroclaw_kernel_modules.stat.exists
+
+# The gateway listens on all addresses so Caddy can reach it, and trusts its
+# X-Forwarded-For. Only the reverse proxy may connect, so nobody else can
+# forge that header.
+- name: Write firewall rules
+  ansible.builtin.template:
+    src: nftables.conf.j2
+    dest: /etc/nftables.conf
+    mode: "0644"
+  notify: Reload nftables
+
+- name: Load firewall rules on boot
+  ansible.builtin.systemd_service:
+    name: nftables
+    enabled: true
+
+# The daemon runs as the login user from cloud-init, like OpenClaw on its VM.
+- name: Read the login user's home
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ zeroclaw_user }}"
+
+- name: Set paths
+  ansible.builtin.set_fact:
+    zeroclaw_home: "{{ ansible_facts.getent_passwd[zeroclaw_user][4] }}"
+
+- name: Create install directory
+  ansible.builtin.file:
+    path: /opt/zeroclaw/{{ zeroclaw_version }}
+    state: directory
+    mode: "0755"
+
+- name: Download ZeroClaw
+  ansible.builtin.get_url:
+    url: "{{ zeroclaw_download_url }}"
+    dest: /opt/zeroclaw/zeroclaw-{{ zeroclaw_version }}.tar.gz
+    checksum: sha256:{{ zeroclaw_sha256 }}
+    mode: "0644"
+
+# One directory per version, so bumping zeroclaw_version switches binary and
+# dashboard together.
+- name: Unpack ZeroClaw
+  ansible.builtin.unarchive:
+    src: /opt/zeroclaw/zeroclaw-{{ zeroclaw_version }}.tar.gz
+    dest: /opt/zeroclaw/{{ zeroclaw_version }}
+    remote_src: true
+    creates: /opt/zeroclaw/{{ zeroclaw_version }}/zeroclaw
+
+# For the CLI only; the service runs the versioned binary, whose web/dist
+# sits next to it.
+- name: Link zeroclaw binary
+  ansible.builtin.file:
+    src: /opt/zeroclaw/{{ zeroclaw_version }}/zeroclaw
+    dest: /usr/local/bin/zeroclaw
+    state: link
+
+- name: Write systemd unit
+  ansible.builtin.template:
+    src: zeroclaw.service.j2
+    dest: /etc/systemd/system/zeroclaw.service
+    mode: "0644"
+  notify: Restart zeroclaw
+
+- name: Enable zeroclaw
+  ansible.builtin.systemd_service:
+    name: zeroclaw
+    enabled: true
+    state: started
+    daemon_reload: true

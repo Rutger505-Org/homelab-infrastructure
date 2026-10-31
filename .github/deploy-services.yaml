@@ -40,6 +40,10 @@ reverse_proxy:
   - *shared
   - ansible/roles/caddy/**
 
+zeroclaw_gateway:
+  - *shared
+  - ansible/roles/zeroclaw/**
+
 proxmox:
   - .github/workflows/deploy.yaml
   - .github/deploy-services.yaml
