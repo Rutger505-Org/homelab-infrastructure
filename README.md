@@ -9,8 +9,9 @@ Two Proxmox nodes running Debian VMs (OpenClaw: Arch) and LXC containers, all as
 - `ansible/playbook.yml`, `ansible/roles/<role>/`: configures each guest. Versions and settings in the role's `defaults/`.
 - `ansible/proxmox.yml`, `ansible/proxmox-inventory.yml`: the Proxmox nodes themselves (no-nag patch, tag colors), over root SSH. Separate inventory so OpenTofu never sees the nodes.
 - `dns/` (OpenTofu): every Cloudflare record of `rutgerpronk.com` and `rutgerpronk.nl`. Dashboard edits are drift and get reverted.
-- `internal-dns/` (OpenTofu): on both AdGuard instances (`adguard-1`, `adguard-2`), AdGuard rewrites (`homelab.rutgerpronk.com` and `*.homelab.rutgerpronk.com` → reverse proxy), the blocklist against DoH bypass (HaGeZi Encrypted DNS Bypass) and tailnet split DNS. Rewrites and lists added in the web UI are left alone.
-- `.github/workflows/`: `deploy.yaml`, `dns.yaml`, `internal-dns.yaml`, and the secrets/vars they need. `.github/deploy-services.yaml` maps changed paths to services.
+- `internal-dns/` (OpenTofu): on both AdGuard instances (`adguard-1`, `adguard-2`), AdGuard rewrites (`homelab.rutgerpronk.com` and `*.homelab.rutgerpronk.com` → reverse proxy), and the blocklist against DoH bypass (HaGeZi Encrypted DNS Bypass). Rewrites and lists added in the web UI are left alone.
+- `tailscale/` (OpenTofu): the tailnet policy file (`policy.hujson`: grants, SSH, tag owners, route auto-approval, tests) and split DNS for `homelab.rutgerpronk.com` → both AdGuard instances. Admin console edits are drift and get reverted.
+- `.github/workflows/`: `deploy.yaml`, `dns.yaml`, `internal-dns.yaml`, `tailscale.yaml`, and the secrets/vars they need. `.github/deploy-services.yaml` maps changed paths to services.
 
 OpenTofu state is in the R2 bucket `homelab-tofu-state` (one key per root), encrypted with `TOFU_STATE_PASSPHRASE` (Bitwarden). Not in k3s, so it survives the cluster.
 
@@ -73,11 +74,9 @@ ssh debian@192.168.178.201 'base64 -w0 k3s-ca.tar.gz && rm k3s-ca.tar.gz' \
 - Enable `Snippets` and `Import` content on the `local` storage.
 - `ssh-keygen -t ed25519 -f homelab-ci -C homelab-ci`; public key in `/root/.ssh/authorized_keys` on both nodes (OpenTofu uploads snippets over SSH), private key as `HOMELAB_SSH_PRIVATE_KEY`.
 - R2 bucket `homelab-tofu-state` with an Object Read & Write token; state passphrase of 16+ characters.
-- Tailscale: `tag:ci-homelab` in `tagOwners`. OAuth clients: CI (`auth_keys` write, `tag:ci-homelab`), router (`auth_keys` write, `tag:homelab`, never expires so a rebuild can rejoin), DNS (`dns` write). ACLs: `tag:ci-homelab` → `192.168.178.0/24` ports 22, 8006 and `192.168.178.205:80`; own devices → `192.168.178.205:53`, `192.168.178.207:443`.
+- Tailscale OAuth clients: CI (`auth_keys` write, `tag:ci-homelab`), router (`auth_keys` write, `tag:homelab`, never expires so a rebuild can rejoin), admin (`policy_file` and `dns` write) → `TAILSCALE_ADMIN_OAUTH_CLIENT_ID`, `TAILSCALE_ADMIN_OAUTH_CLIENT_SECRET`, for `tailscale/`. Tags and access rules are in `tailscale/policy.hujson`.
 - Cloudflare token with `Zone:DNS:Edit`, `Zone:Single Redirect:Edit`, `Zone:Zone:Read` on both zones → `CLOUDFLARE_DNS_API_TOKEN`, for `dns/`.
 - Cloudflare token with only `Zone:DNS:Edit` on `rutgerpronk.com` → `CADDY_CLOUDFLARE_API_TOKEN`, for the reverse proxy's DNS-01 challenge.
-- Tailscale: `tag:ci-homelab` in `tagOwners`. OAuth clients: CI (`auth_keys` write, `tag:ci-homelab`), router (`auth_keys` write, `tag:homelab`, never expires so a rebuild can rejoin), DNS (`dns` write). ACLs: `tag:ci-homelab` → `192.168.178.0/24` ports 22, 8006 and `192.168.178.205:80`, `192.168.178.206:80`; own devices → `192.168.178.205:53`, `192.168.178.206:53`, `192.168.178.207:443`.
-- Cloudflare token with `Zone:DNS:Edit`, `Zone:Single Redirect:Edit`, `Zone:Zone:Read` on both zones → `CLOUDFLARE_DNS_API_TOKEN` (also the reverse proxy's DNS-01 challenge).
 - Secrets with a non-obvious value: `K3S_TOKEN` (`openssl rand -hex 32`), `ADGUARD_ADMIN_PASSWORD_HASH` (`htpasswd -nbBC 10 "" <password> | tr -d ':\n'`, plain text in `ADGUARD_ADMIN_PASSWORD`), `OPENCLAW_READONLY_KUBECONFIG` (kubernetes-infrastructure `4-rbac`), `OPENCLAW_ENV` (`~/.openclaw/.env`).
 
 ## Running locally

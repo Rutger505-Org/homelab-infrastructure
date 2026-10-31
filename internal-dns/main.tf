@@ -46,12 +46,12 @@ moved {
   to   = module.adguard.adguard_list_filter.encrypted_dns_bypass
 }
 
-# Split DNS: tailnet devices ask AdGuard Home for homelab.rutgerpronk.com and
-# its subdomains, everything else keeps the device's own DNS. Away from home
-# the query reaches AdGuard Home through a subnet router, so the rewrite
-# works anywhere the device is in the tailnet. Both instances, so it keeps
-# working with one node down.
-resource "tailscale_dns_split_nameservers" "homelab" {
-  domain      = local.domain
-  nameservers = [var.adguard_host, var.adguard_2_host]
+# Split DNS moved to tailscale/, which imports it. Only drop it from this
+# state; the tailscale provider and its secrets go once this has applied.
+removed {
+  from = tailscale_dns_split_nameservers.homelab
+
+  lifecycle {
+    destroy = false
+  }
 }

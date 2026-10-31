@@ -1,0 +1,56 @@
+{
+	"grants": [
+		// Eigen apparaten: overal bij
+		{
+			"src": ["autogroup:member"],
+			"dst": ["*"],
+			"ip":  ["*"],
+		},
+		// GitHub runner acces: alleen de Kubernetes API
+		{
+			"src": ["tag:ci"],
+			"dst": ["192.168.178.201", "192.168.178.211"],
+			"ip":  ["tcp:6443"],
+		},
+		// homelab-infrastructure CI: Proxmox API + SSH
+		{
+			"src": ["tag:ci-homelab"],
+			"dst": ["192.168.178.0/24"],
+			"ip":  ["tcp:22", "tcp:8006", "tcp:80"],
+		},
+	],
+
+	"ssh": [
+		{
+			"action": "check",
+			"src":    ["autogroup:member"],
+			"dst":    ["autogroup:self"],
+			"users":  ["autogroup:nonroot", "root"],
+		},
+	],
+
+	"tagOwners": {
+		// GitHub actions
+		"tag:ci": [],
+
+		"tag:ci-homelab": [],
+
+		// Homelab VMs
+		"tag:homelab": [],
+	},
+
+	"autoApprovers": {"routes": {"192.168.178.0/24": ["tag:homelab"]}},
+
+	"tests": [
+		{
+			"src":    "tag:ci",
+			"accept": ["192.168.178.201:6443"],
+			"deny":   ["192.168.178.200:8006", "192.168.178.201:22"],
+		},
+		{
+			"src":    "tag:ci-homelab",
+			"accept": ["192.168.178.200:8006", "192.168.178.211:22"],
+			"deny":   ["192.168.178.201:6443"],
+		},
+	],
+}
