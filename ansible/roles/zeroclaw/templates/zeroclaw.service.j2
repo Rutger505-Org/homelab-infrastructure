@@ -13,6 +13,9 @@ Environment=ZEROCLAW_gateway__host=0.0.0.0
 Environment=ZEROCLAW_gateway__port={{ zeroclaw_gateway_port }}
 Environment=ZEROCLAW_gateway__allow_public_bind=true
 Environment=ZEROCLAW_gateway__trust_forwarded_headers=true
+# Behind Caddy every request is remote, so the dashboard's reload button needs
+# this. Still requires a paired token (require_pairing stays on).
+Environment=ZEROCLAW_gateway__allow_remote_admin=true
 ExecStart=/opt/zeroclaw/{{ zeroclaw_version }}/zeroclaw daemon
 Restart=always
 RestartSec=3
