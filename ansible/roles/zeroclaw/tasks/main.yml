@@ -5,6 +5,18 @@
   register: zeroclaw_pacman
   changed_when: "'there is nothing to do' not in zeroclaw_pacman.stdout"
 
+# An upgraded kernel package removes the running kernel's modules, so nft
+# cannot load nf_tables until a reboot. Happens on the first deploy: cloud-init
+# upgrades the fresh VM.
+- name: Check the running kernel's modules
+  ansible.builtin.stat:
+    path: /usr/lib/modules/{{ ansible_facts.kernel }}
+  register: zeroclaw_kernel_modules
+
+- name: Reboot into the upgraded kernel
+  ansible.builtin.reboot:
+  when: not zeroclaw_kernel_modules.stat.exists
+
 # The gateway listens on all addresses so Caddy can reach it, and trusts its
 # X-Forwarded-For. Only the reverse proxy may connect, so nobody else can
 # forge that header.
