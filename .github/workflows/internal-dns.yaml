@@ -35,8 +35,6 @@ jobs:
       AWS_ENDPOINT_URL_S3: ${{ vars.R2_ENDPOINT }}
       TF_VAR_state_passphrase: ${{ secrets.TOFU_STATE_PASSPHRASE }}
       ADGUARD_PASSWORD: ${{ secrets.ADGUARD_ADMIN_PASSWORD }}
-      TAILSCALE_OAUTH_CLIENT_ID: ${{ secrets.TAILSCALE_DNS_OAUTH_CLIENT_ID }}
-      TAILSCALE_OAUTH_CLIENT_SECRET: ${{ secrets.TAILSCALE_DNS_OAUTH_CLIENT_SECRET }}
 
     defaults:
       run:
