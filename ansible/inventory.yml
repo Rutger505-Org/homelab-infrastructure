@@ -34,7 +34,7 @@
 # cgroup limit: the node only gives it what its processes use, with no guest
 # kernel or page cache of its own on top.
 # - proxmox-lade: VMs memory 13 GB, memory_min 11 GB; containers 0.75 GB
-# - proxmox-prodesk: VMs memory 5.5 GB, memory_min 3.5 GB; containers 3 GB
+# - proxmox-prodesk: VMs memory 5.5 GB, memory_min 4 GB; containers 3 GB
 #
 # Redundancy: DNS/DHCP (adguard) and the Tailscale subnet router run once on
 # each node, so either node can go down without taking the LAN's DNS or the
@@ -76,7 +76,10 @@ all:
           # memory until the OOM killer stopped weed.
           cores: 3
           memory: 2048
-          memory_min: 512
+          # At 512 the balloon held it near its floor on prodesk: ~440 MB
+          # usable, 97% used, the guest agent stopped answering. weed alone
+          # takes ~350 MB; 1 GB keeps room for the OS and the agent.
+          memory_min: 1024
           disk_size: 10
           data_disk_size: 60
           startup_order: 3

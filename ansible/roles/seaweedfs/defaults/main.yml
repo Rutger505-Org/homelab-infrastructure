@@ -9,8 +9,10 @@ seaweedfs_s3_port: 8333
 seaweedfs_volume_size_limit_mb: 256
 # Go runtime soft memory limit for the weed process (master, volume, filer and
 # S3 in one): the GC works harder near it instead of growing until the OOM
-# killer steps in. Leaves room for the OS and page cache below `memory` (2048).
-seaweedfs_go_mem_limit: 1536MiB
+# killer steps in. Must stay below the VM's memory_min (1024), not its
+# `memory`: the balloon shrinks the guest to memory_min when the node runs
+# above 80% RAM, and a limit above that let weed grow until the guest thrashed.
+seaweedfs_go_mem_limit: 768MiB
 # Upload data the S3 gateway, filer and volume server each keep in flight.
 # Uploads over the limit wait for a slot instead of piling up in memory.
 seaweedfs_concurrent_upload_limit_mb: 64
