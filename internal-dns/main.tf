@@ -45,13 +45,3 @@ moved {
   from = adguard_list_filter.encrypted_dns_bypass
   to   = module.adguard.adguard_list_filter.encrypted_dns_bypass
 }
-
-# Split DNS moved to tailscale/, which imports it. Only drop it from this
-# state; the tailscale provider and its secrets go once this has applied.
-removed {
-  from = tailscale_dns_split_nameservers.homelab
-
-  lifecycle {
-    destroy = false
-  }
-}
