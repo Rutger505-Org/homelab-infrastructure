@@ -1,4 +1,4 @@
-# Throwaway prototype to try ZeroClaw as an alternative to OpenClaw.
+# ZeroClaw as a possible replacement for OpenClaw.
 # Release archive: the zeroclaw binary plus the web dashboard in web/dist.
 # Arch's own zeroclaw package lags behind and ships no dashboard.
 zeroclaw_version: "0.8.7"
@@ -7,10 +7,67 @@ zeroclaw_download_url: https://github.com/zeroclaw-labs/zeroclaw/releases/downlo
 # Runs the daemon; config, memory and sessions live in its ~/.zeroclaw.
 zeroclaw_user: "{{ ansible_user }}"
 zeroclaw_gateway_port: 42617
-# Tools the agent's shell tool can use.
+# ~/.zeroclaw/.env and .secret_key. Only written when missing: the sync adds
+# new secrets to .env on the VM, so the copy here goes stale. config.toml's
+# secrets are encrypted with .secret_key, so both must come from the same VM.
+zeroclaw_env: "{{ lookup('ansible.builtin.env', 'ZEROCLAW_ENV') }}"
+zeroclaw_secret_key: "{{ lookup('ansible.builtin.env', 'ZEROCLAW_SECRET_KEY') }}"
+# GitHub key of the VM (zeroclaw-vm-managed on Rutger505): zeroclaw-config,
+# dev-env and the project repos.
+zeroclaw_ssh_private_key: "{{ lookup('ansible.builtin.env', 'ZEROCLAW_SSH_PRIVATE_KEY') }}"
+# Same read-only client certificate as the OpenClaw VM.
+zeroclaw_readonly_kubeconfig: "{{ lookup('ansible.builtin.env', 'OPENCLAW_READONLY_KUBECONFIG') }}"
+# The agent's tools: what the OpenClaw VM has on top of dev-env's
+# packages.lst (dev-env's install.sh runs by hand, see the README). Desktop
+# apps and image/boot packages left out.
 zeroclaw_packages:
+  - actionlint
+  - ansible-core
+  - ansible-lint
   - base-devel
-  - git
-  - openssh
+  - bind
+  - bun
+  - chromium
+  - claude-code
   - curl
+  - docker
+  - docker-compose
+  - gdu
+  - git
+  - github-cli
+  - gitleaks
+  - go-yq
+  - helm
+  - jdk17-openjdk
+  - jdk25-openjdk
   - jq
+  - k9s
+  - kubectl
+  - lazygit
+  - minio-client
+  - mosquitto
+  - ndisc6
+  - neovim
+  - nmap
+  - nodejs
+  - npm
+  - openai-codex
+  - openscad
+  - openssh
+  - opentofu
+  - perl
+  - python
+  - rsync
+  - rustup
+  - spotify-player
+  - tcpdump
+  - tmux
+  - unzip
+  - wakeonlan
+  - xorg-server-xvfb
+  - yt-dlp
+  - zip
+# AUR, through yay from the chaotic-aur repository (dev-env uses the same).
+zeroclaw_aur_packages:
+  - gogcli-bin
+  - io.tangencylabs.solidcraft
