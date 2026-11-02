@@ -33,7 +33,7 @@
 # the guest OOM killer instead of pod evictions. A container's `memory` is a
 # cgroup limit: the node only gives it what its processes use, with no guest
 # kernel or page cache of its own on top.
-# - proxmox-lade: VMs memory 13 GB, memory_min 11 GB; containers 0.75 GB
+# - proxmox-lade: VMs memory 17 GB, memory_min 12 GB; containers 0.75 GB
 # - proxmox-prodesk: VMs memory 5.5 GB, memory_min 4 GB; containers 3 GB
 #
 # Redundancy: DNS/DHCP (adguard) and the Tailscale subnet router run once on
@@ -242,9 +242,12 @@ all:
           os: arch
           ansible_user: zeroclaw
           cores: 6
-          memory: 2048
-          memory_min: 1024
-          disk_size: 20
+          # Same tools as the OpenClaw VM (Gradle, Android emulator, ESP32
+          # toolchain): its memory and disk. A low floor, so both fit on lade
+          # while OpenClaw keeps its 6 GB; heavy builds here can then swap.
+          memory: 6144
+          memory_min: 2048
+          disk_size: 65
           data_disk_size: 0
           # The OpenClaw VM, so its agent can check and set up this VM.
           ssh_extra_authorized_keys:

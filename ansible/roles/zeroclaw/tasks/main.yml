@@ -1,9 +1,61 @@
+- name: Check secrets
+  ansible.builtin.assert:
+    that:
+      - zeroclaw_env | length > 0
+      - zeroclaw_secret_key | length > 0
+      - zeroclaw_ssh_private_key | length > 0
+      - zeroclaw_readonly_kubeconfig | length > 0
+    fail_msg: Set ZEROCLAW_ENV, ZEROCLAW_SECRET_KEY, ZEROCLAW_SSH_PRIVATE_KEY and OPENCLAW_READONLY_KUBECONFIG.
+    quiet: true
+  no_log: true
+
+# chaotic-aur ships yay and most AUR packages prebuilt. dev-env's install.sh
+# adds it the same way and skips it when present.
+- name: Check for chaotic-aur
+  ansible.builtin.command: grep -q '^\[chaotic-aur\]' /etc/pacman.conf
+  register: zeroclaw_chaotic
+  changed_when: false
+  failed_when: zeroclaw_chaotic.rc not in [0, 1]
+  check_mode: false
+
+- name: Add chaotic-aur
+  when: zeroclaw_chaotic.rc == 1
+  block:
+    - name: Trust the chaotic-aur key
+      ansible.builtin.shell: |
+        pacman-key --recv-key 3056513887B78AEB --keyserver keyserver.ubuntu.com
+        pacman-key --lsign-key 3056513887B78AEB
+      changed_when: true
+
+    - name: Install the chaotic-aur keyring and mirrorlist
+      ansible.builtin.command: >-
+        pacman -U --needed --noconfirm
+        https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-keyring.pkg.tar.zst
+        https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-mirrorlist.pkg.tar.zst
+      changed_when: true
+
+    - name: Enable chaotic-aur
+      ansible.builtin.blockinfile:
+        path: /etc/pacman.conf
+        marker: "# {mark} chaotic-aur (homelab-infrastructure, role zeroclaw)"
+        block: |
+          [chaotic-aur]
+          Include = /etc/pacman.d/chaotic-mirrorlist
+
 # Arch only supports full upgrades, so installing always upgrades too.
 - name: Install packages
   ansible.builtin.command:
-    argv: "{{ ['pacman', '-Syu', '--needed', '--noconfirm', 'nftables'] + zeroclaw_packages }}"
+    argv: "{{ ['pacman', '-Syu', '--needed', '--noconfirm', 'nftables', 'yay'] + zeroclaw_packages }}"
   register: zeroclaw_pacman
   changed_when: "'there is nothing to do' not in zeroclaw_pacman.stdout"
+
+# yay refuses to run as root.
+- name: Install AUR packages
+  become: false
+  ansible.builtin.command:
+    argv: "{{ ['yay', '-S', '--needed', '--noconfirm'] + zeroclaw_aur_packages }}"
+  register: zeroclaw_yay
+  changed_when: "'there is nothing to do' not in zeroclaw_yay.stdout"
 
 # An upgraded kernel package removes the running kernel's modules, so nft
 # cannot load nf_tables until a reboot. Happens on the first deploy: cloud-init
@@ -41,6 +93,124 @@
 - name: Set paths
   ansible.builtin.set_fact:
     zeroclaw_home: "{{ ansible_facts.getent_passwd[zeroclaw_user][4] }}"
+    zeroclaw_uid: "{{ ansible_facts.getent_passwd[zeroclaw_user][1] }}"
+
+- name: Enable lingering
+  ansible.builtin.command: loginctl enable-linger {{ zeroclaw_user }}
+  args:
+    creates: /var/lib/systemd/linger/{{ zeroclaw_user }}
+
+# Check mode skips the package install, so on a first run docker and its
+# group do not exist yet.
+- name: Add the user to the docker group
+  ansible.builtin.user:
+    name: "{{ zeroclaw_user }}"
+    groups: docker
+    append: true
+  ignore_errors: "{{ ansible_check_mode }}"
+
+- name: Enable Docker
+  ansible.builtin.systemd_service:
+    name: docker
+    enabled: true
+    state: started
+  ignore_errors: "{{ ansible_check_mode }}"
+
+# Everything in the user's home as the user itself, so ownership is right.
+- name: Set up the user's home
+  become: false
+  block:
+    - name: Write GitHub SSH key
+      ansible.builtin.copy:
+        dest: "{{ zeroclaw_home }}/.ssh/id_ed25519"
+        content: "{{ zeroclaw_ssh_private_key | trim }}\n"
+        mode: "0600"
+      no_log: true
+
+    # ssh reads id_ed25519.pub next to the private key; a stale .pub from an
+    # earlier key makes signing fail ("contents do not match public").
+    - name: Derive GitHub SSH public key
+      ansible.builtin.command:
+        argv: [ssh-keygen, -y, -f, "{{ zeroclaw_home }}/.ssh/id_ed25519"]
+      register: zeroclaw_ssh_public_key
+      changed_when: false
+      check_mode: false
+
+    - name: Write GitHub SSH public key
+      ansible.builtin.copy:
+        dest: "{{ zeroclaw_home }}/.ssh/id_ed25519.pub"
+        content: "{{ zeroclaw_ssh_public_key.stdout | trim }}\n"
+        mode: "0644"
+
+    - name: Create kube directory
+      ansible.builtin.file:
+        path: "{{ zeroclaw_home }}/.kube"
+        state: directory
+        mode: "0700"
+
+    - name: Write read-only kubeconfig
+      ansible.builtin.copy:
+        dest: "{{ zeroclaw_home }}/.kube/readonly.kubeconfig"
+        content: "{{ zeroclaw_readonly_kubeconfig | trim }}\n"
+        mode: "0600"
+      no_log: true
+
+    # Not installed: dev-env's install.sh asks for its optional groups interactively.
+    - name: Clone dev-env
+      ansible.builtin.git:
+        repo: git@github.com:Rutger505/dev-env.git
+        dest: "{{ zeroclaw_home }}/.local/share/dev-env"
+        version: main
+        accept_newhostkey: true
+        update: false
+
+    - name: Create ZeroClaw directory
+      ansible.builtin.file:
+        path: "{{ zeroclaw_home }}/.zeroclaw"
+        state: directory
+        mode: "0755"
+
+    - name: Write ZeroClaw secrets
+      ansible.builtin.copy:
+        dest: "{{ zeroclaw_home }}/.zeroclaw/{{ item.name }}"
+        content: "{{ item.content | trim }}\n"
+        mode: "0600"
+        force: false
+      loop:
+        - { name: .env, content: "{{ zeroclaw_env }}" }
+        - { name: .secret_key, content: "{{ zeroclaw_secret_key }}" }
+      loop_control:
+        label: "{{ item.name }}"
+      no_log: true
+
+    - name: Check for the config checkout
+      ansible.builtin.stat:
+        path: "{{ zeroclaw_home }}/.zeroclaw/.git"
+      register: zeroclaw_config_git
+
+    # Steps from the zeroclaw-config README: install.sh turns ~/.zeroclaw into
+    # the checkout and enables the sync and worktree-cleanup timers. Before the
+    # daemon's first start, so it never writes a default config.
+    - name: Set up the config repo
+      when: not zeroclaw_config_git.stat.exists
+      environment:
+        XDG_RUNTIME_DIR: /run/user/{{ zeroclaw_uid }}
+      block:
+        - name: Clone zeroclaw-config
+          ansible.builtin.git:
+            repo: git@github.com:Rutger505/zeroclaw-config.git
+            dest: "{{ zeroclaw_home }}/Temporary/zeroclaw-config"
+            version: main
+            accept_newhostkey: true
+
+        - name: Run the config install script
+          ansible.builtin.command: "{{ zeroclaw_home }}/Temporary/zeroclaw-config/sync/install.sh"
+          changed_when: true
+
+        - name: Remove the temporary clone
+          ansible.builtin.file:
+            path: "{{ zeroclaw_home }}/Temporary/zeroclaw-config"
+            state: absent
 
 - name: Create install directory
   ansible.builtin.file:
