@@ -230,6 +230,44 @@
             path: "/tmp/zeroclaw-config"
             state: absent
 
+    # The config repo's install.sh only runs on the first deploy, which
+    # predates worktree-cleanup.
+    - name: Enable worktree cleanup
+      ansible.builtin.command: "{{ zeroclaw_home }}/.zeroclaw/worktree-cleanup/install.sh"
+      args:
+        creates: "{{ zeroclaw_home }}/.config/systemd/user/timers.target.wants/worktree-cleanup.timer"
+      environment:
+        XDG_RUNTIME_DIR: /run/user/{{ zeroclaw_uid }}
+
+    # dev-env's link step only (its install.sh is interactive). Real
+    # directories first, else stow folds them into links to the repo and apps
+    # write into it.
+    - name: Create directories dev-env links into
+      ansible.builtin.file:
+        path: "{{ zeroclaw_home }}/{{ item }}"
+        state: directory
+        mode: "0700"
+      loop: [.ssh, .claude, .local/bin, .config/systemd/user]
+
+    - name: Link dev-env configs
+      ansible.builtin.command:
+        argv: [stow, --verbose, "--target={{ zeroclaw_home }}", .]
+        chdir: "{{ zeroclaw_home }}/.local/share/dev-env"
+      register: zeroclaw_stow
+      changed_when: "'LINK' in zeroclaw_stow.stderr"
+
+    # Pushes local dev-env commits and fast-forwards every minute.
+    - name: Enable the dev-env update timer
+      ansible.builtin.systemd_service:
+        name: dev-env-update-self.timer
+        scope: user
+        enabled: true
+        state: started
+        daemon_reload: true
+      environment:
+        XDG_RUNTIME_DIR: /run/user/{{ zeroclaw_uid }}
+      ignore_errors: "{{ ansible_check_mode }}"
+
 - name: Create install directory
   ansible.builtin.file:
     path: /opt/zeroclaw/{{ zeroclaw_version }}

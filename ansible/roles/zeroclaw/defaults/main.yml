@@ -60,6 +60,7 @@ zeroclaw_packages:
   - rsync
   - rustup
   - spotify-player
+  - stow
   - tcpdump
   - tmux
   - unzip
@@ -70,4 +71,3 @@ zeroclaw_packages:
 # AUR, through yay from the chaotic-aur repository (dev-env uses the same).
 zeroclaw_aur_packages:
   - gogcli-bin
-  - io.tangencylabs.solidcraft

@@ -7,6 +7,9 @@ Wants=network-online.target
 User={{ zeroclaw_user }}
 WorkingDirectory={{ zeroclaw_home }}
 Environment=HOME={{ zeroclaw_home }}
+# Lets agent shells use the user manager (systemctl/systemd-run --user), e.g.
+# the Fastify emulator script. Lingering keeps it running.
+Environment=XDG_RUNTIME_DIR=/run/user/{{ zeroclaw_uid }}
 # Env overrides of ~/.zeroclaw/config.toml, never written to it: the dashboard
 # owns that file. Binding beyond localhost needs allow_public_bind.
 Environment=ZEROCLAW_gateway__host=0.0.0.0
