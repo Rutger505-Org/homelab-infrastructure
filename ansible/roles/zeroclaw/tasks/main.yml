@@ -84,6 +84,24 @@
     name: nftables
     enabled: true
 
+# /tmp on disk instead of a tmpfs of half the RAM, so builds and logs there
+# don't eat memory. Masking doesn't unmount the running tmpfs: takes effect on
+# the next reboot.
+- name: Keep /tmp on disk
+  ansible.builtin.systemd_service:
+    name: tmp.mount
+    masked: true
+
+# Replaces systemd's tmp.conf (same name). D empties /tmp on every boot, like
+# the tmpfs did; 10d still ages out old files during a long uptime.
+- name: Clear /tmp on boot
+  ansible.builtin.copy:
+    dest: /etc/tmpfiles.d/tmp.conf
+    content: |
+      D /tmp 1777 root root 10d
+      q /var/tmp 1777 root root 30d
+    mode: "0644"
+
 # The daemon runs as the login user from cloud-init, like OpenClaw on its VM.
 - name: Read the login user's home
   ansible.builtin.getent:
@@ -199,17 +217,17 @@
         - name: Clone zeroclaw-config
           ansible.builtin.git:
             repo: git@github.com:Rutger505/zeroclaw-config.git
-            dest: "{{ zeroclaw_home }}/Temporary/zeroclaw-config"
+            dest: "/tmp/zeroclaw-config"
             version: main
             accept_newhostkey: true
 
         - name: Run the config install script
-          ansible.builtin.command: "{{ zeroclaw_home }}/Temporary/zeroclaw-config/sync/install.sh"
+          ansible.builtin.command: "/tmp/zeroclaw-config/sync/install.sh"
           changed_when: true
 
         - name: Remove the temporary clone
           ansible.builtin.file:
-            path: "{{ zeroclaw_home }}/Temporary/zeroclaw-config"
+            path: "/tmp/zeroclaw-config"
             state: absent
 
 - name: Create install directory
