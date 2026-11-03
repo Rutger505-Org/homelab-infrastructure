@@ -13,7 +13,7 @@ table inet host_firewall {
     meta l4proto { icmp, ipv6-icmp } accept
 
     tcp dport 22 accept
-    # Gateway and dashboard, only through the reverse proxy
-    ip saddr { {{ groups['reverse_proxy'] | map('extract', hostvars, 'ansible_host') | join(', ') }} } tcp dport {{ zeroclaw_gateway_port }} accept
+    # Gateway, dashboard and someclaw, only through the reverse proxy
+    ip saddr { {{ groups['reverse_proxy'] | map('extract', hostvars, 'ansible_host') | join(', ') }} } tcp dport { {{ zeroclaw_gateway_port }}, {{ zeroclaw_someclaw_port }} } accept
   }
 }

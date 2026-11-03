@@ -23,6 +23,9 @@ caddy_routes:
     upstream: http://192.168.178.210:18789
   zeroclaw:
     upstream: http://192.168.178.218:42617
+  # Custom ZeroClaw web UI on the same VM (zeroclaw_someclaw_port).
+  someclaw:
+    upstream: http://192.168.178.218:42618
   proxmox-lade:
     upstream: https://192.168.178.200:8006
     insecure_tls: true

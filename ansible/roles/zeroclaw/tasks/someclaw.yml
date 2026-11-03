@@ -1,0 +1,20 @@
+# Custom web UI (Rutger505/someclaw) next to the official dashboard. Like
+# dev-env: cloned once, its own update timer fast-forwards it every minute and
+# restarts the service.
+- name: Clone someclaw
+  become: false
+  ansible.builtin.git:
+    repo: git@github.com:Rutger505/someclaw.git
+    dest: "{{ zeroclaw_home }}/.local/share/someclaw"
+    version: main
+    accept_newhostkey: true
+    update: false
+
+# Links and enables someclaw.service and someclaw-update.timer.
+- name: Run the someclaw install script
+  become: false
+  ansible.builtin.command: "{{ zeroclaw_home }}/.local/share/someclaw/install.sh"
+  args:
+    creates: "{{ zeroclaw_home }}/.config/systemd/user/timers.target.wants/someclaw-update.timer"
+  environment:
+    XDG_RUNTIME_DIR: /run/user/{{ zeroclaw_uid }}
