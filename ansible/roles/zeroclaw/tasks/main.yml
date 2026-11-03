@@ -57,19 +57,6 @@
   register: zeroclaw_yay
   changed_when: "'there is nothing to do' not in zeroclaw_yay.stdout"
 
-- name: Download SolidCraft
-  ansible.builtin.get_url:
-    url: "{{ zeroclaw_solidcraft_url }}"
-    dest: /var/cache/pacman/pkg/{{ zeroclaw_solidcraft_package }}
-    checksum: sha256:{{ zeroclaw_solidcraft_sha256 }}
-    mode: "0644"
-
-- name: Install SolidCraft
-  ansible.builtin.command:
-    argv: [pacman, -U, --needed, --noconfirm, "/var/cache/pacman/pkg/{{ zeroclaw_solidcraft_package }}"]
-  register: zeroclaw_solidcraft
-  changed_when: "'there is nothing to do' not in zeroclaw_solidcraft.stdout"
-
 # An upgraded kernel package removes the running kernel's modules, so nft
 # cannot load nf_tables until a reboot. Happens on the first deploy: cloud-init
 # upgrades the fresh VM.
@@ -125,7 +112,6 @@
   ansible.builtin.set_fact:
     zeroclaw_home: "{{ ansible_facts.getent_passwd[zeroclaw_user][4] }}"
     zeroclaw_uid: "{{ ansible_facts.getent_passwd[zeroclaw_user][1] }}"
-    zeroclaw_android_home: "{{ ansible_facts.getent_passwd[zeroclaw_user][4] }}/.local/share/android-sdk"
 
 - name: Enable lingering
   ansible.builtin.command: loginctl enable-linger {{ zeroclaw_user }}
@@ -281,78 +267,6 @@
       environment:
         XDG_RUNTIME_DIR: /run/user/{{ zeroclaw_uid }}
       ignore_errors: "{{ ansible_check_mode }}"
-
-    # Rust in dev-env's locations (shell/env.sh), which the skills use too.
-    - name: Set up Rust
-      environment:
-        RUSTUP_HOME: "{{ zeroclaw_home }}/.local/share/rustup"
-        CARGO_HOME: "{{ zeroclaw_home }}/.local/share/cargo"
-      block:
-        - name: Install the stable Rust toolchain
-          ansible.builtin.command: rustup default stable
-          args:
-            creates: "{{ zeroclaw_home }}/.local/share/rustup/toolchains/stable-x86_64-unknown-linux-gnu"
-
-        - name: Add Rust targets
-          ansible.builtin.command:
-            argv: "{{ ['rustup', 'target', 'add', '--toolchain', 'stable'] + zeroclaw_rust_targets }}"
-          register: zeroclaw_rust_targets_added
-          changed_when: "'installing component' in zeroclaw_rust_targets_added.stderr"
-
-        # Xtensa toolchain for the ESP32. ESP-IDF itself comes with the first
-        # firmware build (embuild, into ~/.espressif).
-        - name: Install the ESP32 toolchain
-          ansible.builtin.command:
-            argv: [espup, install, --export-file, "{{ zeroclaw_home }}/export-esp.sh"]
-            creates: "{{ zeroclaw_home }}/export-esp.sh"
-
-    # The Fastify AVD holds the app's login, so it is copied from the old VM,
-    # not created here.
-    - name: Set up the Android SDK
-      environment:
-        ANDROID_HOME: "{{ zeroclaw_android_home }}"
-        ANDROID_USER_HOME: "{{ zeroclaw_home }}/.local/share/android"
-        JAVA_HOME: /usr/lib/jvm/java-17-openjdk
-      block:
-        - name: Check for the Android command-line tools
-          ansible.builtin.stat:
-            path: "{{ zeroclaw_android_home }}/cmdline-tools/latest/bin/sdkmanager"
-          register: zeroclaw_sdkmanager
-
-        - name: Install the Android command-line tools
-          when: not zeroclaw_sdkmanager.stat.exists
-          block:
-            - name: Download the Android command-line tools
-              ansible.builtin.get_url:
-                url: https://dl.google.com/android/repository/{{ zeroclaw_android_cmdline_tools }}
-                dest: "/tmp/{{ zeroclaw_android_cmdline_tools }}"
-                checksum: sha1:{{ zeroclaw_android_cmdline_tools_sha1 }}
-                mode: "0644"
-
-            # The zip holds cmdline-tools/, sdkmanager wants cmdline-tools/latest/.
-            - name: Unpack the Android command-line tools
-              ansible.builtin.shell: |
-                set -e
-                rm -rf "$ANDROID_HOME/cmdline-tools/unpack"
-                mkdir -p "$ANDROID_HOME/cmdline-tools"
-                unzip -q "/tmp/{{ zeroclaw_android_cmdline_tools }}" -d "$ANDROID_HOME/cmdline-tools/unpack"
-                mv "$ANDROID_HOME/cmdline-tools/unpack/cmdline-tools" "$ANDROID_HOME/cmdline-tools/latest"
-                rmdir "$ANDROID_HOME/cmdline-tools/unpack"
-              changed_when: true
-
-            - name: Remove the command-line tools download
-              ansible.builtin.file:
-                path: "/tmp/{{ zeroclaw_android_cmdline_tools }}"
-                state: absent
-
-        # sdkmanager is a shim for the Android CLI now: it accepts licenses
-        # itself, and --licenses exits without reading stdin (yes | ... dies
-        # of SIGPIPE). Each package lands in the directory its name spells.
-        - name: Install Android SDK packages
-          ansible.builtin.command:
-            argv: ["{{ zeroclaw_android_home }}/cmdline-tools/latest/bin/sdkmanager", --install, "{{ item }}"]
-            creates: "{{ zeroclaw_android_home }}/{{ item | replace(';', '/') }}"
-          loop: "{{ zeroclaw_android_packages }}"
 
 - name: Create install directory
   ansible.builtin.file:
