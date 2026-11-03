@@ -27,11 +27,14 @@ zeroclaw_packages:
   - base-devel
   - bind
   - bun
+  - cargo-ndk
   - chromium
   - claude-code
   - curl
   - docker
   - docker-compose
+  - espflash
+  - espup
   - gdu
   - git
   - github-cli
@@ -44,6 +47,7 @@ zeroclaw_packages:
   - k9s
   - kubectl
   - lazygit
+  - ldproxy
   - minio-client
   - mosquitto
   - ndisc6
@@ -56,10 +60,12 @@ zeroclaw_packages:
   - openssh
   - opentofu
   - perl
+  - probe-rs
   - python
   - rsync
   - rustup
   - spotify-player
+  - stow
   - tcpdump
   - tmux
   - unzip
@@ -70,4 +76,32 @@ zeroclaw_packages:
 # AUR, through yay from the chaotic-aur repository (dev-env uses the same).
 zeroclaw_aur_packages:
   - gogcli-bin
-  - io.tangencylabs.solidcraft
+# Not in the AUR: the upstream release's Arch package. Gives solidcraft-cli,
+# the MCP server in zeroclaw-config.
+zeroclaw_solidcraft_version: "0.30.1"
+zeroclaw_solidcraft_sha256: 1dcb9f23201203765e51e360108c4d020985cef56317c4515952249e91f9113b
+zeroclaw_solidcraft_package: solidcraft-{{ zeroclaw_solidcraft_version }}-linux-x86_64.pkg.tar.zst
+zeroclaw_solidcraft_url: https://github.com/tangency-labs/solidcraft/releases/download/v{{ zeroclaw_solidcraft_version }}/{{ zeroclaw_solidcraft_package }}
+# Rust targets: ESP32-C/nRF52 firmware and the Fastify core for Android.
+# espup adds the Xtensa toolchain (esp) on top.
+zeroclaw_rust_targets:
+  - thumbv7em-none-eabihf
+  - riscv32imac-unknown-none-elf
+  - riscv32imafc-unknown-none-elf
+  - riscv32imc-unknown-none-elf
+  - aarch64-linux-android
+  - x86_64-linux-android
+# Android SDK in ~/.local/share/android-sdk (dev-env's ANDROID_HOME), same
+# packages as the OpenClaw VM. The x86_64 image is the Fastify emulator's.
+zeroclaw_android_cmdline_tools: commandlinetools-linux-16111833_latest.zip
+zeroclaw_android_cmdline_tools_sha1: e025545c62a8e64c7559119566a569fb1dec5f60
+zeroclaw_android_packages:
+  - platform-tools
+  - emulator
+  - platforms;android-35
+  - platforms;android-37.0
+  - build-tools;35.0.0
+  - build-tools;36.0.0
+  - build-tools;37.0.0
+  - ndk;30.0.16248370
+  - system-images;android-35;google_apis;x86_64
