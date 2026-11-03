@@ -148,6 +148,9 @@ all:
           proxmox_node: proxmox-lade
           os: arch
           ansible_user: openclaw
+          # Shut down: ZeroClaw took over. Kept with its disk until that's
+          # settled; true starts it again. Deploys skip stopped hosts.
+          started: false
           cores: 6
           # No balloon headroom: the gateway plus the Fastify Android emulator
           # and Gradle builds need all 6 GB; at 4 GB the guest swapped and the

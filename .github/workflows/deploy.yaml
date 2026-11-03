@@ -179,14 +179,27 @@ jobs:
             *) inventory=inventory.yml playbook=playbook.yml limit=$SERVICE ;;
           esac
 
+          # Stopped VMs (`started: false`) can't be reached: skip them.
+          hosts=()
+          for host in $(ANSIBLE_FORCE_COLOR=false ansible "$limit" -i "$inventory" --list-hosts | tail -n +2); do
+            if [ "$(ansible-inventory -i "$inventory" --host "$host" | jq '.started != false')" = true ]; then
+              hosts+=("$host")
+            else
+              echo "::notice::$host is stopped, skipping it."
+            fi
+          done
+          if [ ${#hosts[@]} -eq 0 ]; then
+            exit 0
+          fi
+
           if [ "$CHECK" != true ]; then
-            ansible-playbook -i "$inventory" "$playbook" --limit "$limit" --diff
+            ansible-playbook -i "$inventory" "$playbook" --limit "$(IFS=,; echo "${hosts[*]}")" --diff
             exit 0
           fi
 
           # A VM the PR adds does not exist yet: check the hosts that are up.
           up=()
-          for host in $(ANSIBLE_FORCE_COLOR=false ansible "$limit" -i "$inventory" --list-hosts | tail -n +2); do
+          for host in "${hosts[@]}"; do
             if ansible "$host" -i "$inventory" -m ansible.builtin.ping > /dev/null 2>&1; then
               up+=("$host")
             else
