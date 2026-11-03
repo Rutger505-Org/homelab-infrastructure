@@ -116,3 +116,9 @@ variable "startup_delay" {
   type        = number
   default     = null
 }
+
+variable "started" {
+  description = "Run the VM and start it on node boot; false shuts it down but keeps it and its disks"
+  type        = bool
+  default     = true
+}
