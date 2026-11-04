@@ -25,7 +25,7 @@ OpenTofu state is in the R2 bucket `homelab-tofu-state` (one key per root), encr
 
 ## Common changes
 
-- Add a VM: host in the inventory (all size fields required, no defaults; `memory_min` is the balloon floor, see the inventory header), a play in `playbook.yml`, the group in `deploy-services.yaml`. Optional `os: arch`, `ansible_user`.
+- Add a VM: host in the inventory (all size fields required, no defaults; `memory_min` is the balloon floor, see the inventory header), a play in `playbook.yml`, the group in `deploy-services.yaml`. Optional `os: arch`, `ansible_user`. For real memory metrics in Grafana: role `node_exporter` in its play, `ansible/roles/node_exporter/**` in its `deploy-services.yaml` entry, port 9100 open to the k3s nodes in its firewall, and its address in `node_exporter_targets` in kubernetes-infrastructure's 7-monitoring.
 - VM or container: LAN-only services are unprivileged LXC containers (`guest_type: lxc`, see the inventory header), anything reachable from the internet stays a VM. Containers log in as root without sudo, so a role must not rely on `become` switching users. Docker needs `lxc_keyctl: true`, a TUN device `lxc_devices: [/dev/net/tun]`.
 - Both are root@pam only in Proxmox, which an API token never is: OpenTofu mints a root@pam ticket over its root SSH login for calls under `/nodes/` (`root_ticket` in `proxmox/providers.tf`).
 - Move a VM to a container: `guest_type: lxc` and a new `vm_id` on the host. Stop the old VM first if the container takes over its address, and copy data over by hand (tar over SSH, then rerun the deploy).
