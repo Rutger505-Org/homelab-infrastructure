@@ -15,6 +15,7 @@ shared: &shared
 object_storage:
   - *shared
   - ansible/roles/seaweedfs/**
+  - ansible/roles/node_exporter/**
 
 k3s:
   - *shared
@@ -27,6 +28,7 @@ tailscale_router:
 openclaw_gateway:
   - *shared
   - ansible/roles/openclaw/**
+  - ansible/roles/node_exporter/**
 
 home_assistant:
   - *shared
@@ -43,6 +45,7 @@ reverse_proxy:
 zeroclaw_gateway:
   - *shared
   - ansible/roles/zeroclaw/**
+  - ansible/roles/node_exporter/**
 
 proxmox:
   - .github/workflows/deploy.yaml

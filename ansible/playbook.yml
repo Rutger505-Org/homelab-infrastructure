@@ -63,6 +63,7 @@
   become: true
   roles:
     - seaweedfs
+    - node_exporter
 
 # Server first, so the agents can join it.
 - name: Install k3s server
@@ -91,6 +92,8 @@
   hosts: openclaw_gateway
   roles:
     - openclaw
+    - role: node_exporter
+      become: true
 
 - name: Install Home Assistant
   hosts: home_assistant
@@ -115,3 +118,4 @@
   become: true
   roles:
     - zeroclaw
+    - node_exporter

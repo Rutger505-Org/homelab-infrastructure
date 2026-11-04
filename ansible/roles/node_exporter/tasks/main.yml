@@ -1,0 +1,26 @@
+# Real memory use inside a VM (MemAvailable, page cache, PSI) for Prometheus
+# in k3s (kubernetes-infrastructure 7-monitoring, job node-vms): Proxmox
+# measures a VM from outside, where page cache counts as used. Not for k3s
+# nodes, kube-prometheus-stack runs its own there; not for containers, whose
+# memory Proxmox reports correctly. Port 9100, opened to the k3s nodes in each
+# role's nftables.conf.j2.
+- name: Install node exporter (Debian)
+  ansible.builtin.apt:
+    name: prometheus-node-exporter
+    # Skips prometheus-node-exporter-collectors: smartmon and apt timers.
+    install_recommends: false
+  when: os | default('debian') == 'debian'
+
+# No -y: Arch hosts' own role already synced and upgraded (pacman -Syu).
+- name: Install node exporter (Arch)
+  ansible.builtin.command:
+    argv: [pacman, -S, --needed, --noconfirm, prometheus-node-exporter]
+  register: node_exporter_pacman
+  changed_when: "'there is nothing to do' not in node_exporter_pacman.stdout"
+  when: os | default('debian') == 'arch'
+
+- name: Start node exporter
+  ansible.builtin.systemd_service:
+    name: prometheus-node-exporter
+    enabled: true
+    state: started

@@ -14,5 +14,8 @@ table inet host_firewall {
 
     tcp dport 22 accept
     tcp dport {{ seaweedfs_s3_port }} accept
+    # node exporter (role node_exporter), scraped by Prometheus in k3s; pod
+    # traffic is masqueraded to the node IP
+    ip saddr { {{ (groups['k3s_server'] + groups['k3s_agent']) | map('extract', hostvars, 'ansible_host') | join(', ') }} } tcp dport 9100 accept
   }
 }
