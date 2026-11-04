@@ -15,5 +15,9 @@ table inet host_firewall {
     tcp dport 22 accept
     # Gateway, dashboard and someclaw, only through the reverse proxy
     ip saddr { {{ groups['reverse_proxy'] | map('extract', hostvars, 'ansible_host') | join(', ') }} } tcp dport { {{ zeroclaw_gateway_port }}, {{ zeroclaw_someclaw_port }} } accept
+    # k3s nodes (pod traffic is masqueraded to the node IP): Prometheus'
+    # blackbox probes of /health and /someclaw/version (kubernetes-infrastructure
+    # 7-monitoring). Homelab names don't resolve on the nodes, so no Caddy.
+    ip saddr { {{ (groups['k3s_server'] + groups['k3s_agent']) | map('extract', hostvars, 'ansible_host') | join(', ') }} } tcp dport { {{ zeroclaw_gateway_port }}, {{ zeroclaw_someclaw_port }} } accept
   }
 }
