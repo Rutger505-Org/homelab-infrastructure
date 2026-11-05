@@ -7,6 +7,8 @@ Wants=network-online.target
 User={{ zeroclaw_user }}
 WorkingDirectory={{ zeroclaw_home }}
 Environment=HOME={{ zeroclaw_home }}
+# Local-only gog keyring password; never store its value in this repository.
+EnvironmentFile=-{{ zeroclaw_home }}/.config/gogcli/keyring.env
 # Lets agent shells use the user manager (systemctl/systemd-run --user), e.g.
 # the Fastify emulator script. Lingering keeps it running.
 Environment=XDG_RUNTIME_DIR=/run/user/{{ zeroclaw_uid }}
