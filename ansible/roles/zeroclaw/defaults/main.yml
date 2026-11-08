@@ -1,4 +1,4 @@
-# ZeroClaw as a possible replacement for OpenClaw.
+# ZeroClaw, the AI agent (took over from OpenClaw).
 # Release archive: the zeroclaw binary plus the web dashboard in web/dist.
 # Arch's own zeroclaw package lags behind and ships no dashboard.
 zeroclaw_version: "0.8.7"
@@ -18,11 +18,10 @@ zeroclaw_secret_key: "{{ lookup('ansible.builtin.env', 'ZEROCLAW_SECRET_KEY') }}
 # GitHub key of the VM (zeroclaw-vm-managed on Rutger505): zeroclaw-config,
 # dev-env and the project repos.
 zeroclaw_ssh_private_key: "{{ lookup('ansible.builtin.env', 'ZEROCLAW_SSH_PRIVATE_KEY') }}"
-# Same read-only client certificate as the OpenClaw VM.
+# Read-only client certificate. Secret name from the old OpenClaw VM.
 zeroclaw_readonly_kubeconfig: "{{ lookup('ansible.builtin.env', 'OPENCLAW_READONLY_KUBECONFIG') }}"
-# The agent's tools: what the OpenClaw VM has on top of dev-env's
-# packages.lst (dev-env's install.sh runs by hand, see the README). Desktop
-# apps and image/boot packages left out.
+# The agent's tools on top of dev-env's packages.lst (dev-env's install.sh
+# runs by hand, see the README). Desktop apps and image/boot packages left out.
 zeroclaw_packages:
   - actionlint
   - ansible-core

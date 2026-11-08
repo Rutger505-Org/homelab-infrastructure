@@ -88,13 +88,6 @@
   roles:
     - tailscale_router
 
-- name: Install OpenClaw
-  hosts: openclaw_gateway
-  roles:
-    - openclaw
-    - role: node_exporter
-      become: true
-
 - name: Install Home Assistant
   hosts: home_assistant
   become: true

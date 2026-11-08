@@ -102,7 +102,7 @@
       q /var/tmp 1777 root root 30d
     mode: "0644"
 
-# The daemon runs as the login user from cloud-init, like OpenClaw on its VM.
+# The daemon runs as the login user from cloud-init.
 - name: Read the login user's home
   ansible.builtin.getent:
     database: passwd
