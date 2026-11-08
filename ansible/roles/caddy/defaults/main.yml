@@ -19,8 +19,6 @@ caddy_routes:
     upstream: http://192.168.178.205:80
   adguard-2:
     upstream: http://192.168.178.206:80
-  openclaw:
-    upstream: http://192.168.178.210:18789
   zeroclaw:
     upstream: http://192.168.178.218:42617
   # Custom ZeroClaw web UI on the same VM (zeroclaw_someclaw_port).

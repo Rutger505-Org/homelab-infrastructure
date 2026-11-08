@@ -25,11 +25,6 @@ tailscale_router:
   - *shared
   - ansible/roles/tailscale_router/**
 
-openclaw_gateway:
-  - *shared
-  - ansible/roles/openclaw/**
-  - ansible/roles/node_exporter/**
-
 home_assistant:
   - *shared
   - ansible/roles/home_assistant/**

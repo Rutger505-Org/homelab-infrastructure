@@ -140,29 +140,6 @@ all:
           startup_order: 2
           lxc_devices:
             - /dev/net/tun
-    openclaw_gateway:
-      hosts:
-        openclaw:
-          ansible_host: 192.168.178.210
-          vm_id: 910
-          proxmox_node: proxmox-lade
-          os: arch
-          ansible_user: openclaw
-          # Shut down: ZeroClaw took over. Kept with its disk until that's
-          # settled; true starts it again. Deploys skip stopped hosts.
-          started: false
-          cores: 6
-          # No balloon headroom: the gateway plus the Fastify Android emulator
-          # and Gradle builds need all 6 GB; at 4 GB the guest swapped and the
-          # OOM killer stopped the emulator.
-          memory: 6144
-          memory_min: 6144
-          disk_size: 65
-          data_disk_size: 0
-          openclaw_gateway_enabled: true
-          # The ZeroClaw VM, so its agent can read this one while it takes over.
-          ssh_extra_authorized_keys:
-            - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJaR5qveoqhJ5DeAU3PbL9eapp4sodt84K2z01YvKTaC zeroclaw-vm-managed
     home_assistant:
       hosts:
         home-assistant:
@@ -237,24 +214,18 @@ all:
           disk_size: 4
           data_disk_size: 0
           startup_order: 2
-    # Throwaway prototype: ZeroClaw as a possible replacement for OpenClaw.
+    # ZeroClaw, the AI agent (took over from OpenClaw).
     zeroclaw_gateway:
       hosts:
         zeroclaw:
           ansible_host: 192.168.178.218
           vm_id: 913
           proxmox_node: proxmox-lade
-          # Arch, like the OpenClaw VM it may replace.
           os: arch
           ansible_user: zeroclaw
           cores: 6
-          # Same tools as the OpenClaw VM (Gradle, Android emulator, ESP32
-          # toolchain): its memory and disk. A low floor, so both fit on lade
-          # while OpenClaw keeps its 6 GB; heavy builds here can then swap.
+          # Gradle, Android emulator and ESP32 toolchain need the 6 GB.
           memory: 6144
           memory_min: 6144
           disk_size: 65
           data_disk_size: 0
-          # The OpenClaw VM, so its agent can check and set up this VM.
-          ssh_extra_authorized_keys:
-            - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDjhA21XhwvSlL8x41gyQAbZWzfxF2h9V0gWpxD3LXwT openclaw-vm-managed

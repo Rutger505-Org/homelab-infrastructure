@@ -1,6 +1,6 @@
 # homelab-infrastructure
 
-Two Proxmox nodes running Debian VMs (OpenClaw: Arch) and LXC containers, all as code. This README only covers what the code can't tell you; for everything else read the files below.
+Two Proxmox nodes running Debian VMs (ZeroClaw: Arch) and LXC containers, all as code. This README only covers what the code can't tell you; for everything else read the files below.
 
 ## Where things live
 
@@ -34,7 +34,6 @@ OpenTofu state is in the R2 bucket `homelab-tofu-state` (one key per root), encr
 - SSH keys: `ssh_authorized_keys` in the inventory is the exact `authorized_keys` on every VM; keep `homelab-ci`. Per host extras: `ssh_extra_authorized_keys`.
 - New `<service>.homelab.rutgerpronk.com`: an entry in `caddy_routes`, no DNS change; it also shows up on the `homelab.rutgerpronk.com` landing page. Some apps must trust the proxy (`192.168.178.207`):
   - Home Assistant: done by the role, in the confirmed (`stable`) slot of `.storage/http` (YAML `http:` is ignored since 2026.8); from the `reverse_proxy` group
-  - OpenClaw: URL in `gateway.controlUi.allowedOrigins`, proxy in `gateway.trustedProxies`
 - Upgrade a service: bump its `*_version` in the role defaults.
 - Use homelab names from a device: Tailscale with DNS and routes accepted (`tailscale up --accept-dns --accept-routes`).
 
@@ -46,8 +45,7 @@ OpenTofu state is in the R2 bucket `homelab-tofu-state` (one key per root), encr
 - AdGuard Home: two instances, `adguard-1` (prodesk) and `adguard-2` (lade). The config is seeded once, then owned by each web UI, except the `dhcp` settings (each leases its own half of the pool, both hand out both DNS servers). Web UI settings are not synced between them: change both, or put it in `internal-dns/`. DHCP is never switched on by a deploy: turn the modem's DHCP off and enable it in both web UIs by hand (a rebuilt container starts with it off). If both are down, turn modem DHCP back on. The modem's IPv6 DNS fields must be `2001:1c07:589:7900::53` and `::54`. Changing the password secret does not change a running instance.
 - Ziggo modem after a reset: port forwarding 80 and 443 (TCP+UDP, UDP for HTTP/3) → Traefik `192.168.178.230`, needed for every public `*.rutgerpronk.com`/`rutgerpronk.nl` site; DHCP off (AdGuard leases); IPv6 DNS `2001:1c07:589:7900::53` and `::54`; IPv4 DNS can't be left empty and rejects private IPs, so fill a public resolver (`1.1.1.1`, `9.9.9.9`): only the modem itself uses it.
 - Home Assistant: onboarding creates the owner; add the MQTT integration with broker `localhost`. Proxy trust in the UI (HTTP server) gets overwritten by the role; other HTTP server settings stay. The role fails on an unknown `.storage/http` version after an HA upgrade: check the format, bump the expected version.
-- OpenClaw VM: shut down (`started: false`), disk kept; `true` starts it again. Run dev-env's `install.sh` by hand. `.env` is only written when missing, so keep `OPENCLAW_ENV` up to date. State outside the config repo (sessions, memory, channel credentials) is not backed up. Set `openclaw_gateway_enabled: false` before running a second Gateway with the same state, or both answer.
-- ZeroClaw VM: like the OpenClaw VM, run dev-env's `install.sh` by hand. Config is the `zeroclaw-config` repo in `~/.zeroclaw`; `ZEROCLAW_ENV` and `ZEROCLAW_SECRET_KEY` are its `.env` and `.secret_key`, only written when missing, keep them up to date (the encrypted secrets in `config.toml` need that exact key). Sessions and memory in `~/.zeroclaw/data` are not backed up. Pairing code: `ssh zeroclaw@192.168.178.218 zeroclaw gateway get-paircode`. Custom web UI: `someclaw` repo in `~/.local/share/someclaw`, cloned once by the role; its own timer keeps it on `origin/main`. A bigger `disk_size` only grows the disk: grow the partition and filesystem by hand or reboot (cloud-init growpart). `/tmp` is on disk, not tmpfs (`tmp.mount` masked), and emptied on every boot by tmpfiles; a change to that needs a reboot.
+- ZeroClaw VM: run dev-env's `install.sh` by hand. Config is the `zeroclaw-config` repo in `~/.zeroclaw`; `ZEROCLAW_ENV` and `ZEROCLAW_SECRET_KEY` are its `.env` and `.secret_key`, only written when missing, keep them up to date (the encrypted secrets in `config.toml` need that exact key). Sessions and memory in `~/.zeroclaw/data` are not backed up. Pairing code: `ssh zeroclaw@192.168.178.218 zeroclaw gateway get-paircode`. Custom web UI: `someclaw` repo in `~/.local/share/someclaw`, cloned once by the role; its own timer keeps it on `origin/main`. A bigger `disk_size` only grows the disk: grow the partition and filesystem by hand or reboot (cloud-init growpart). `/tmp` is on disk, not tmpfs (`tmp.mount` masked), and emptied on every boot by tmpfiles; a change to that needs a reboot.
 - Grafana is LAN only: Caddy is its only route in, to its MetalLB address `.231`.
 - Finance is LAN only the same way, on `.234`. It has no authentication, so it must never get an ingress or a public route.
 - Proxmox no-nag: the run fails when a widget toolkit update breaks the patch. Tag style changes made in the UI get overwritten.
@@ -77,7 +75,7 @@ ssh debian@192.168.178.201 'base64 -w0 k3s-ca.tar.gz && rm k3s-ca.tar.gz' \
 - Tailscale OAuth clients: CI (`auth_keys` write, `tag:ci-homelab`), router (`auth_keys` write, `tag:homelab`, never expires so a rebuild can rejoin), admin (`policy_file` and `dns` write) → `TAILSCALE_ADMIN_OAUTH_CLIENT_ID`, `TAILSCALE_ADMIN_OAUTH_CLIENT_SECRET`, for `tailscale/`. Tags and access rules are in `tailscale/policy.hujson`.
 - Cloudflare token with `Zone:DNS:Edit`, `Zone:Single Redirect:Edit`, `Zone:Zone:Read` on both zones → `CLOUDFLARE_DNS_API_TOKEN`, for `dns/`.
 - Cloudflare token with only `Zone:DNS:Edit` on `rutgerpronk.com` → `CADDY_CLOUDFLARE_API_TOKEN`, for the reverse proxy's DNS-01 challenge.
-- Secrets with a non-obvious value: `K3S_TOKEN` (`openssl rand -hex 32`), `ADGUARD_ADMIN_PASSWORD_HASH` (`htpasswd -nbBC 10 "" <password> | tr -d ':\n'`, plain text in `ADGUARD_ADMIN_PASSWORD`), `OPENCLAW_READONLY_KUBECONFIG` (kubernetes-infrastructure `4-rbac`), `OPENCLAW_ENV` (`~/.openclaw/.env`), `ZEROCLAW_ENV` and `ZEROCLAW_SECRET_KEY` (`~/.zeroclaw/.env`, `.secret_key` on the ZeroClaw VM), `ZEROCLAW_SSH_PRIVATE_KEY` (GitHub key `zeroclaw-vm-managed`).
+- Secrets with a non-obvious value: `K3S_TOKEN` (`openssl rand -hex 32`), `ADGUARD_ADMIN_PASSWORD_HASH` (`htpasswd -nbBC 10 "" <password> | tr -d ':\n'`, plain text in `ADGUARD_ADMIN_PASSWORD`), `OPENCLAW_READONLY_KUBECONFIG` (kubernetes-infrastructure `4-rbac`), `ZEROCLAW_ENV` and `ZEROCLAW_SECRET_KEY` (`~/.zeroclaw/.env`, `.secret_key` on the ZeroClaw VM), `ZEROCLAW_SSH_PRIVATE_KEY` (GitHub key `zeroclaw-vm-managed`).
 
 ## Running locally
 
