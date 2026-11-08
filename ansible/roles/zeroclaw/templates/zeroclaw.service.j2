@@ -24,6 +24,9 @@ Environment=ZEROCLAW_gateway__allow_remote_admin=true
 ExecStart=/opt/zeroclaw/{{ zeroclaw_version }}/zeroclaw daemon
 Restart=always
 RestartSec=3
+# Agent shells (cargo, gradle) run in this cgroup. Default OOMPolicy=stop takes
+# the whole daemon and every running turn down when the kernel kills one build.
+OOMPolicy=continue
 
 [Install]
 WantedBy=multi-user.target
