@@ -302,6 +302,8 @@
     src: /opt/zeroclaw/{{ zeroclaw_version }}/zeroclaw
     dest: /usr/local/bin/zeroclaw
     state: link
+  # Check mode doesn't unpack, so a new version's binary isn't there yet.
+  ignore_errors: "{{ ansible_check_mode }}"
 
 - name: Write systemd unit
   ansible.builtin.template:
