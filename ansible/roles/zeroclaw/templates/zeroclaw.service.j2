@@ -27,6 +27,13 @@ RestartSec=3
 # Agent shells (cargo, gradle) run in this cgroup. Default OOMPolicy=stop takes
 # the whole daemon and every running turn down when the kernel kills one build.
 OOMPolicy=continue
+# Stop: SIGTERM to the daemon only; once it exits, whatever its agent shells
+# still run gets SIGKILL right away. With control-group they got SIGTERM too
+# and one ignoring it held the stop until the timeout.
+KillMode=mixed
+# The daemon stops in milliseconds (zeroclaw-patches 0002); this only caps a
+# hang, default 90 s.
+TimeoutStopSec=10s
 
 [Install]
 WantedBy=multi-user.target
