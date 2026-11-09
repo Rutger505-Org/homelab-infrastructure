@@ -1,9 +1,11 @@
 # ZeroClaw, the AI agent (took over from OpenClaw).
 # Release archive: the zeroclaw binary plus the web dashboard in web/dist.
 # Arch's own zeroclaw package lags behind and ships no dashboard.
-zeroclaw_version: "0.8.7"
-zeroclaw_sha256: e10e6e4ba7bf8a081af4a8769d8c16ca3eb48e8e897eac42b94ca4335b120a34
-zeroclaw_download_url: https://github.com/zeroclaw-labs/zeroclaw/releases/download/v{{ zeroclaw_version }}/zeroclaw-x86_64-unknown-linux-gnu.tar.gz
+# Built by Rutger505/zeroclaw-patches: upstream release + patch queue
+# (someclaw's per-session model picker). Version = its release tag minus v.
+zeroclaw_version: "0.8.7-p2"
+zeroclaw_sha256: 47e488a8a4824e9dedceff61361f1d0373047345010cc1b281308f6934f8f771
+zeroclaw_download_url: https://github.com/Rutger505/zeroclaw-patches/releases/download/v{{ zeroclaw_version }}/zeroclaw-x86_64-unknown-linux-gnu.tar.gz
 # Runs the daemon; config, memory and sessions live in its ~/.zeroclaw.
 zeroclaw_user: "{{ ansible_user }}"
 zeroclaw_gateway_port: 42617

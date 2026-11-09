@@ -292,6 +292,8 @@
     dest: /opt/zeroclaw/{{ zeroclaw_version }}
     remote_src: true
     creates: /opt/zeroclaw/{{ zeroclaw_version }}/zeroclaw
+  # Check mode doesn't create the new version's directory.
+  ignore_errors: "{{ ansible_check_mode }}"
 
 # For the CLI only; the service runs the versioned binary, whose web/dist
 # sits next to it.
@@ -300,6 +302,8 @@
     src: /opt/zeroclaw/{{ zeroclaw_version }}/zeroclaw
     dest: /usr/local/bin/zeroclaw
     state: link
+  # Check mode doesn't unpack, so a new version's binary isn't there yet.
+  ignore_errors: "{{ ansible_check_mode }}"
 
 - name: Write systemd unit
   ansible.builtin.template:
