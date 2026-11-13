@@ -36,6 +36,13 @@
 	}
 
 {% endfor %}
+{% for name, target in caddy_redirects.items() %}
+	@{{ name }} host {{ name }}.{{ caddy_domain }}
+	handle @{{ name }} {
+		redir https://{{ target }}.{{ caddy_domain }}{uri}
+	}
+
+{% endfor %}
 	# The bare domain: a page linking every route above.
 	@index host {{ caddy_domain }}
 	handle @index {

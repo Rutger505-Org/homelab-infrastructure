@@ -10,7 +10,7 @@ zeroclaw_download_url: https://github.com/Rutger505/zeroclaw-patches/releases/do
 zeroclaw_user: "{{ ansible_user }}"
 zeroclaw_gateway_port: 42617
 # someclaw (Rutger505/someclaw), the custom web UI next to the official
-# dashboard. Its server.ts default; Caddy's someclaw route points here.
+# dashboard. Its server.ts default; Caddy's rocky route points here.
 zeroclaw_someclaw_port: 42618
 # ~/.zeroclaw/.env and .secret_key. Only written when missing: the sync adds
 # new secrets to .env on the VM, so the copy here goes stale. config.toml's

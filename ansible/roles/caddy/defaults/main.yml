@@ -21,8 +21,8 @@ caddy_routes:
     upstream: http://192.168.178.206:80
   zeroclaw:
     upstream: http://192.168.178.218:42617
-  # Custom ZeroClaw web UI on the same VM (zeroclaw_someclaw_port).
-  someclaw:
+  # someclaw (custom ZeroClaw web UI) on the same VM (zeroclaw_someclaw_port).
+  rocky:
     upstream: http://192.168.178.218:42618
   proxmox-lade:
     upstream: https://192.168.178.200:8006
@@ -38,3 +38,7 @@ caddy_routes:
   # The finance app's MetalLB address in k3s (deploy/main.tf in Rutger505-Org/finance).
   finance:
     upstream: http://192.168.178.234:80
+
+# Old name => route name: <old>.homelab.rutgerpronk.com redirects there, path kept.
+caddy_redirects:
+  someclaw: rocky
