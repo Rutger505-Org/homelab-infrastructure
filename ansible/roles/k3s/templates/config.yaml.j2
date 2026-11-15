@@ -1,6 +1,12 @@
 token: {{ k3s_token }}
 # Kubelet passes this to pods instead of the node's resolv.conf (no search domain).
 resolv-conf: {{ k3s_resolv_conf }}
+# Prune unused images from 80% disk use down to 75% (default 85/80), so it
+# happens before KubePersistentVolumeFillingUp fires at 85%: local-path PVs
+# share the 20GB root disk with the images.
+kubelet-arg:
+  - image-gc-high-threshold=80
+  - image-gc-low-threshold=75
 {% if k3s_role == 'server' %}
 write-kubeconfig-mode: "0600"
 # MetalLB hands out LoadBalancer IPs instead.
