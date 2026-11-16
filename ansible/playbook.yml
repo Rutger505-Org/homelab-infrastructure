@@ -58,6 +58,13 @@
   roles:
     - ssh_keys
 
+- name: Limit journal size
+  hosts: all
+  gather_facts: false
+  become: true
+  roles:
+    - journald
+
 - name: Install SeaweedFS
   hosts: object_storage
   become: true

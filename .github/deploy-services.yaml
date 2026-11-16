@@ -10,6 +10,7 @@ shared: &shared
   - ansible/inventory.yml
   - ansible/playbook.yml
   - ansible/roles/ssh_keys/**
+  - ansible/roles/journald/**
   - proxmox/**
 
 object_storage:
