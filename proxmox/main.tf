@@ -22,9 +22,7 @@ locals {
   # to the public IP. AdGuard itself uses the modem; it can't depend on itself.
   adguard_hosts = keys(local.inventory.all.children.adguard.hosts)
   nameservers = {
-    # TEMPORARY rollout step 1/2: a DNS change reboots the guest, so prodesk
-    # first and lade in a follow-up PR (never both tailscale routers at once).
-    for name, host in local.hosts : name => contains(local.adguard_hosts, name) || host.proxmox_node != "proxmox-prodesk"
+    for name, host in local.hosts : name => contains(local.adguard_hosts, name)
     ? [var.lan_gateway]
     : [for adguard in local.adguard_hosts : local.hosts[adguard].ansible_host]
   }
