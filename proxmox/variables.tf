@@ -47,7 +47,7 @@ variable "lan_prefix_length" {
 }
 
 variable "lan_gateway" {
-  description = "LAN gateway, also used as DNS server"
+  description = "LAN gateway, also the DNS server of the AdGuard guests"
   type        = string
   default     = "192.168.178.1"
 }
