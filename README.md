@@ -36,6 +36,7 @@ OpenTofu state is in the R2 bucket `homelab-tofu-state` (one key per root), encr
   - Home Assistant: done by the role, in the confirmed (`stable`) slot of `.storage/http` (YAML `http:` is ignored since 2026.8); from the `reverse_proxy` group
 - Upgrade a service: bump its `*_version` in the role defaults.
 - Use homelab names from a device: Tailscale with DNS and routes accepted (`tailscale up --accept-dns --accept-routes`).
+- Guest DNS: every guest resolves through `adguard-1` + `adguard-2` (`local.nameservers` in `proxmox/main.tf`), AdGuard itself through the modem. A guest that resolves through the modem gets the public IP for `*.homelab.rutgerpronk.com`; check `resolvectl status`. Static guests don't use DHCP, so this is the only place their DNS comes from. Pods (`k3s_nameservers`) still use the modem. Cloud-init applies a changed DNS server on the VM's next boot.
 
 ## Manual and not automated
 

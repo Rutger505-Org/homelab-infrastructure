@@ -15,6 +15,19 @@ locals {
   # `os` is the one optional host var: Debian unless a host sets `os: arch`.
   vm_os      = { for name, vm in local.vms : name => try(vm.os, "debian") }
   arch_nodes = toset([for name, vm in local.vms : vm.proxmox_node if local.vm_os[name] == "arch"])
+
+  # Guests resolve through both AdGuard instances, so they see the same names
+  # as the LAN (*.homelab.rutgerpronk.com -> reverse proxy). No modem fallback:
+  # resolved would switch to it and those names would intermittently resolve
+  # to the public IP. AdGuard itself uses the modem; it can't depend on itself.
+  adguard_hosts = keys(local.inventory.all.children.adguard.hosts)
+  nameservers = {
+    # TEMPORARY rollout step 1/2: a DNS change reboots the guest, so prodesk
+    # first and lade in a follow-up PR (never both tailscale routers at once).
+    for name, host in local.hosts : name => contains(local.adguard_hosts, name) || host.proxmox_node != "proxmox-prodesk"
+    ? [var.lan_gateway]
+    : [for adguard in local.adguard_hosts : local.hosts[adguard].ansible_host]
+  }
 }
 
 resource "proxmox_download_file" "debian" {
@@ -77,7 +90,7 @@ module "vm" {
 
   ipv4_address = "${each.value.ansible_host}/${var.lan_prefix_length}"
   ipv4_gateway = var.lan_gateway
-  nameservers  = [var.lan_gateway]
+  nameservers  = local.nameservers[each.key]
 
   # Only hosts with ipv6_host get a fixed IPv6 address (see inventory.yml).
   ipv6_address = try(
@@ -111,7 +124,7 @@ module "lxc" {
 
   ipv4_address = "${each.value.ansible_host}/${var.lan_prefix_length}"
   ipv4_gateway = var.lan_gateway
-  nameservers  = [var.lan_gateway]
+  nameservers  = local.nameservers[each.key]
 
   ipv6_address = try(
     "${cidrhost(local.inventory.all.vars.lan_ipv6_prefix, parseint(each.value.ipv6_host, 16))}/${split("/", local.inventory.all.vars.lan_ipv6_prefix)[1]}",
