@@ -102,6 +102,42 @@
       q /var/tmp 1777 root root 30d
     mode: "0644"
 
+# The Arch cloud image ships 512 MB of swap: too little for the Android
+# emulator next to Rust builds, the OOM killer took both. Resizing a swapfile
+# in place isn't possible, so it's turned off and recreated.
+- name: Check the swapfile
+  ansible.builtin.stat:
+    path: /swap/swapfile
+  register: zeroclaw_swapfile
+
+- name: Recreate the swapfile at its new size
+  when: zeroclaw_swapfile.stat.size | default(0) != zeroclaw_swap_mb * 1024 * 1024
+  block:
+    - name: Turn off the swapfile
+      ansible.builtin.command: swapoff /swap/swapfile
+      when: zeroclaw_swapfile.stat.exists
+      changed_when: true
+
+    - name: Remove the old swapfile
+      ansible.builtin.file:
+        path: /swap/swapfile
+        state: absent
+
+    # mkswapfile sets the no-CoW and no-compression flags btrfs needs.
+    - name: Create the swapfile
+      ansible.builtin.command:
+        argv: [btrfs, filesystem, mkswapfile, --size, "{{ zeroclaw_swap_mb }}m", /swap/swapfile]
+      changed_when: true
+
+    - name: Turn on the swapfile
+      ansible.builtin.command: swapon /swap/swapfile
+      changed_when: true
+
+- name: Mount the swapfile on boot
+  ansible.builtin.lineinfile:
+    path: /etc/fstab
+    line: /swap/swapfile none swap defaults 0 0
+
 # The daemon runs as the login user from cloud-init.
 - name: Read the login user's home
   ansible.builtin.getent:

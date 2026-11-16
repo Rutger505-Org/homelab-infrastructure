@@ -6,6 +6,8 @@
 zeroclaw_version: "0.8.7-p6"
 zeroclaw_sha256: 140fabaa9ecbf1d42c3574c36304d286de18e11433eb1898c252ba5707d04323
 zeroclaw_download_url: https://github.com/Rutger505/zeroclaw-patches/releases/download/v{{ zeroclaw_version }}/zeroclaw-x86_64-unknown-linux-gnu.tar.gz
+# /swap/swapfile, on top of the 6 GB RAM.
+zeroclaw_swap_mb: 4096
 # Runs the daemon; config, memory and sessions live in its ~/.zeroclaw.
 zeroclaw_user: "{{ ansible_user }}"
 zeroclaw_gateway_port: 42617
