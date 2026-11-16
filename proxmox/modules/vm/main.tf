@@ -144,6 +144,11 @@ resource "proxmox_virtual_environment_vm" "this" {
     }
   }
 
+  # The cloud images boot with console=ttyS0: without a serial port its getty
+  # fails and restarts forever. Also an emergency console when the network is
+  # down: `qm terminal <vm_id>` on the node.
+  serial_device {}
+
   network_device {
     bridge = var.bridge
   }
