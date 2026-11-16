@@ -275,6 +275,14 @@
       environment:
         XDG_RUNTIME_DIR: /run/user/{{ zeroclaw_uid }}
 
+    # Same for the build queue (buildq/emu links + 5-minute reaper timer).
+    - name: Enable the build queue
+      ansible.builtin.command: "{{ zeroclaw_home }}/.zeroclaw/agents/rocky/workspace/skills/buildq/install.sh"
+      args:
+        creates: "{{ zeroclaw_home }}/.config/systemd/user/timers.target.wants/buildq-reap.timer"
+      environment:
+        XDG_RUNTIME_DIR: /run/user/{{ zeroclaw_uid }}
+
     # dev-env's link step only (its install.sh is interactive). Real
     # directories first, else stow folds them into links to the repo and apps
     # write into it.
