@@ -1,0 +1,5 @@
+# On restart journald deletes archived files until it is under the new limit.
+- name: Restart journald
+  ansible.builtin.systemd_service:
+    name: systemd-journald
+    state: restarted
