@@ -36,6 +36,16 @@ resource "adguard_list_filter" "encrypted_dns_bypass" {
   url  = "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists/adblock/doh.txt"
 }
 
+# Owns ALL custom filtering rules: rules added in the web UI are drift and
+# get reverted. Allowlist entries undo blocks by the default AdGuard DNS
+# filter (still managed in the web UI) where they break things.
+resource "adguard_user_rules" "this" {
+  rules = [
+    "! Gamma newsletter buttons: Adobe click tracker, breaks every link in their mails",
+    "@@||data.email.gamma.nl^",
+  ]
+}
+
 output "records" {
   description = "Internal hostnames and the address they resolve to"
   value = {

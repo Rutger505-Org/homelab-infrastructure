@@ -45,3 +45,15 @@ moved {
   from = adguard_list_filter.encrypted_dns_bypass
   to   = module.adguard.adguard_list_filter.encrypted_dns_bypass
 }
+
+# Adopt the user rules already set in each web UI, so the plan shows what
+# changes instead of silently overwriting them.
+import {
+  to = module.adguard.adguard_user_rules.this
+  id = "1"
+}
+
+import {
+  to = module.adguard_2.adguard_user_rules.this
+  id = "1"
+}
