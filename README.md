@@ -9,7 +9,7 @@ Two Proxmox nodes running Debian VMs (ZeroClaw: Arch) and LXC containers, all as
 - `ansible/playbook.yml`, `ansible/roles/<role>/`: configures each guest. Versions and settings in the role's `defaults/`.
 - `ansible/proxmox.yml`, `ansible/proxmox-inventory.yml`: the Proxmox nodes themselves (no-nag patch, tag colors), over root SSH. Separate inventory so OpenTofu never sees the nodes.
 - `dns/` (OpenTofu): every Cloudflare record of `rutgerpronk.com` and `rutgerpronk.nl`. Dashboard edits are drift and get reverted.
-- `internal-dns/` (OpenTofu): on both AdGuard instances (`adguard-1`, `adguard-2`), AdGuard rewrites (`homelab.rutgerpronk.com` and `*.homelab.rutgerpronk.com` → reverse proxy), and the blocklist against DoH bypass (HaGeZi Encrypted DNS Bypass). Rewrites and lists added in the web UI are left alone.
+- `internal-dns/` (OpenTofu): on both AdGuard instances (`adguard-1`, `adguard-2`), AdGuard rewrites (`homelab.rutgerpronk.com` and `*.homelab.rutgerpronk.com` → reverse proxy), the blocklist against DoH bypass (HaGeZi Encrypted DNS Bypass), and all custom filtering rules (allowlist). Rewrites and lists added in the web UI are left alone; custom rules added there get reverted.
 - `tailscale/` (OpenTofu): the tailnet policy file (`policy.hujson`: grants, SSH, tag owners, route auto-approval, tests) and split DNS for `homelab.rutgerpronk.com` → both AdGuard instances. Admin console edits are drift and get reverted.
 - `.github/workflows/`: `deploy.yaml`, `dns.yaml`, `internal-dns.yaml`, `tailscale.yaml`, and the secrets/vars they need. `.github/deploy-services.yaml` maps changed paths to services.
 
