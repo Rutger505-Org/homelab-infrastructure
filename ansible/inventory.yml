@@ -224,8 +224,8 @@ all:
           os: arch
           ansible_user: zeroclaw
           cores: 6
-          # Gradle, Android emulator and ESP32 toolchain need the 6 GB.
+          # Gradle and the Android emulator need the 6 GB.
           memory: 6144
           memory_min: 6144
-          disk_size: 65
+          disk_size: 100
           data_disk_size: 0
