@@ -6,6 +6,11 @@
       "actions": ["Admin", "Read", "List", "Tagging", "Write"]
     },
     {
+      "name": "wsconnect-logs",
+      "credentials": [{"accessKey": seaweedfs_wsconnect_logs_access_key, "secretKey": seaweedfs_wsconnect_logs_secret_key}],
+      "actions": ["Write:wsconnect-logs"]
+    },
+    {
       "name": "anonymous",
       "actions": seaweedfs_buckets | map('regex_replace', '^', 'Read:') | list
     }
