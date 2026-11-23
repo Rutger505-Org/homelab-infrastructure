@@ -3,7 +3,9 @@
     that:
       - seaweedfs_admin_access_key | length > 0
       - seaweedfs_admin_secret_key | length > 0
-    fail_msg: Set SEAWEEDFS_ADMIN_ACCESS_KEY and SEAWEEDFS_ADMIN_SECRET_KEY.
+      - seaweedfs_wsconnect_logs_access_key | length > 0
+      - seaweedfs_wsconnect_logs_secret_key | length > 0
+    fail_msg: Set SEAWEEDFS_ADMIN_ACCESS_KEY, SEAWEEDFS_ADMIN_SECRET_KEY, SEAWEEDFS_WSCONNECT_LOGS_ACCESS_KEY and SEAWEEDFS_WSCONNECT_LOGS_SECRET_KEY.
     quiet: true
   no_log: true
 
@@ -156,6 +158,6 @@
   ansible.builtin.command: weed shell
   args:
     stdin: s3.bucket.create --name {{ item }}
-  loop: "{{ seaweedfs_buckets }}"
+  loop: "{{ seaweedfs_buckets + seaweedfs_private_buckets }}"
   when: item not in (seaweedfs_bucket_list.stdout_lines | map('trim') | map('split') | map('first') | list)
   changed_when: true

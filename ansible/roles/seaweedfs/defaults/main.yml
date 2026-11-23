@@ -20,5 +20,12 @@ seaweedfs_concurrent_upload_limit_mb: 64
 seaweedfs_buckets:
   - clips
   - artifacts
+# Private: no anonymous read; listing/reading only with the admin key.
+seaweedfs_private_buckets:
+  - wsconnect-logs
 seaweedfs_admin_access_key: "{{ lookup('ansible.builtin.env', 'SEAWEEDFS_ADMIN_ACCESS_KEY') }}"
 seaweedfs_admin_secret_key: "{{ lookup('ansible.builtin.env', 'SEAWEEDFS_ADMIN_SECRET_KEY') }}"
+# Write-only key for wsconnect-logs: baked into the workstation-connect APK and the laptop's
+# config, so treat it as public. It can only put objects in that one bucket.
+seaweedfs_wsconnect_logs_access_key: "{{ lookup('ansible.builtin.env', 'SEAWEEDFS_WSCONNECT_LOGS_ACCESS_KEY') }}"
+seaweedfs_wsconnect_logs_secret_key: "{{ lookup('ansible.builtin.env', 'SEAWEEDFS_WSCONNECT_LOGS_SECRET_KEY') }}"
