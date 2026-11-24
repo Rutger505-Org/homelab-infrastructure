@@ -3,8 +3,8 @@
 # Arch's own zeroclaw package lags behind and ships no dashboard.
 # Built by Rutger505/zeroclaw-patches: upstream release + patch queue
 # (someclaw's per-session model picker). Version = its release tag minus v.
-zeroclaw_version: "0.8.7-p9"
-zeroclaw_sha256: 61c179c45e5de15f9cfe2ad72e5b0104e29431a7e22cc483d0d0845623e6271d
+zeroclaw_version: "0.8.7-p10"
+zeroclaw_sha256: f6e1fabbca5a3fa9329c98245af1b9685f80dec973b5e30a0937c3b1c55845b8
 zeroclaw_download_url: https://github.com/Rutger505/zeroclaw-patches/releases/download/v{{ zeroclaw_version }}/zeroclaw-x86_64-unknown-linux-gnu.tar.gz
 # /swap/swapfile, on top of the 6 GB RAM.
 zeroclaw_swap_mb: 4096
